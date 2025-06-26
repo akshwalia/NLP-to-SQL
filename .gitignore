@@ -131,9 +131,6 @@ service-account-key.json
 *.backup
 
 # Test files
-test_*.py
-*_test.py
-tests/
 pytest_cache/
 .pytest_cache/
 
