@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # MongoDB connection
-MONGODB_URL = os.getenv("MONGODB_URL", "mongodb://localhost:27017")
+MONGODB_URL = os.getenv("MONGO_URI", "mongodb://localhost:27017")
 client = MongoClient(MONGODB_URL)
 db = client.get_database("nlp_sql")
 
