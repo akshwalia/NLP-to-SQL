@@ -127,7 +127,6 @@ service-account-key.json
 
 # Database files
 *.dump
-*.sql
 *.bak
 *.backup
 
