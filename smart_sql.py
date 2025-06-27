@@ -3210,7 +3210,6 @@ Respond with ONLY one of these two words:
         try:
             # Analyze data characteristics
             data_characteristics = self._analyze_data_characteristics(results)
-            print(f"[DEBUG] Data characteristics: {data_characteristics}")
             
             # Prepare prompt for LLM
             chart_recommendation_prompt = self._create_chart_recommendation_prompt()
@@ -3225,7 +3224,6 @@ Respond with ONLY one of these two words:
                 "data_characteristics": data_characteristics,
                 "database_type": database_type or "general"
             }
-            print(f"[DEBUG] Chart recommendation context: {context}")
             
             # Generate recommendations using LLM
             chain = chart_recommendation_prompt | self.llm
@@ -3233,7 +3231,6 @@ Respond with ONLY one of these two words:
             
             # Parse the LLM response
             response_text = self._extract_response_content(response)
-            print(f"[DEBUG] LLM response for chart recommendations: {response_text}")
             
             # Parse JSON response from LLM
             import json
@@ -3251,15 +3248,26 @@ Respond with ONLY one of these two words:
             
             # Validate and format recommendations
             formatted_recommendations = self._format_chart_recommendations(recommendations_data, data_characteristics)
-            print(f"[DEBUG] Final formatted recommendations: {formatted_recommendations}")
+            
+            # Final safety check - ensure no None values in x_axis or y_axis
+            if formatted_recommendations.get("recommended_charts"):
+                safe_charts = []
+                for chart in formatted_recommendations["recommended_charts"]:
+                    if (chart.get("x_axis") and chart.get("y_axis") and 
+                        chart["x_axis"] != "None" and chart["y_axis"] != "None"):
+                        safe_charts.append(chart)
+                formatted_recommendations["recommended_charts"] = safe_charts
+                
+                # Update is_visualizable if no charts remain
+                if not safe_charts:
+                    formatted_recommendations["is_visualizable"] = False
+                    formatted_recommendations["reason"] = "Unable to determine valid chart axes from data"
             
             return formatted_recommendations
             
         except Exception as e:
-            print(f"[DEBUG] Error generating chart recommendations: {e}")
             # Return fallback recommendations
             fallback = self._create_fallback_recommendations(data_characteristics if 'data_characteristics' in locals() else {}, results)
-            print(f"[DEBUG] Using fallback recommendations: {fallback}")
             return fallback
 
     def _create_chart_recommendation_prompt(self):
@@ -3403,8 +3411,8 @@ Return ONLY the JSON object with no additional text or formatting."""
                 "chart_type": "bar",
                 "title": f"{numerical_cols[0]} by {categorical_cols[0]}",
                 "description": "Bar chart showing values across categories",
-                "x_axis": categorical_cols[0],
-                "y_axis": numerical_cols[0],
+                "x_axis": str(categorical_cols[0]),
+                "y_axis": str(numerical_cols[0]),
                 "secondary_y_axis": None,
                 "chart_config": {"color_scheme": "blue"},
                 "confidence_score": 0.7
@@ -3415,8 +3423,8 @@ Return ONLY the JSON object with no additional text or formatting."""
                 "chart_type": "scatter",
                 "title": f"{numerical_cols[1]} vs {numerical_cols[0]}",
                 "description": "Scatter plot showing correlation between values",
-                "x_axis": numerical_cols[0],
-                "y_axis": numerical_cols[1],
+                "x_axis": str(numerical_cols[0]),
+                "y_axis": str(numerical_cols[1]),
                 "secondary_y_axis": None,
                 "chart_config": {"color_scheme": "blue"},
                 "confidence_score": 0.6
@@ -3427,8 +3435,8 @@ Return ONLY the JSON object with no additional text or formatting."""
                 "chart_type": "pie",
                 "title": f"Distribution of {numerical_cols[0]} by {categorical_cols[0]}",
                 "description": "Pie chart showing distribution across categories",
-                "x_axis": categorical_cols[0],
-                "y_axis": numerical_cols[0],
+                "x_axis": str(categorical_cols[0]),
+                "y_axis": str(numerical_cols[0]),
                 "secondary_y_axis": None,
                 "chart_config": {"color_scheme": "multi"},
                 "confidence_score": 0.6
@@ -3440,8 +3448,8 @@ Return ONLY the JSON object with no additional text or formatting."""
                 "chart_type": "line", 
                 "title": f"{numerical_cols[0]} over time",
                 "description": "Line chart showing trends over time",
-                "x_axis": date_cols[0],
-                "y_axis": numerical_cols[0],
+                "x_axis": str(date_cols[0]),
+                "y_axis": str(numerical_cols[0]),
                 "secondary_y_axis": None,
                 "chart_config": {"color_scheme": "blue"},
                 "confidence_score": 0.8
@@ -3467,16 +3475,64 @@ Return ONLY the JSON object with no additional text or formatting."""
                 "data_characteristics": recommendations_data.get("data_characteristics", data_characteristics)
             }
             
+            # Get available columns for fallback
+            available_columns = (
+                data_characteristics.get("numerical_columns", []) +
+                data_characteristics.get("categorical_columns", []) +
+                data_characteristics.get("date_columns", [])
+            )
+            
             # Format recommended charts
             for chart in recommendations_data.get("recommended_charts", []):
-                if isinstance(chart, dict) and all(key in chart for key in ["chart_type", "title", "x_axis", "y_axis"]):
+                if isinstance(chart, dict) and chart.get("chart_type") and chart.get("title"):
+                    # Validate and fix x_axis and y_axis - ensure they're never None
+                    x_axis = chart.get("x_axis")
+                    y_axis = chart.get("y_axis")
+                    
+                    # If x_axis or y_axis is None, try to assign reasonable defaults
+                    if x_axis is None or x_axis == "null":
+                        if data_characteristics.get("categorical_columns"):
+                            x_axis = data_characteristics["categorical_columns"][0]
+                        elif data_characteristics.get("date_columns"):
+                            x_axis = data_characteristics["date_columns"][0]
+                        elif available_columns:
+                            x_axis = available_columns[0]
+                        else:
+                            # Skip this chart if we can't determine a valid x_axis
+                            continue
+                    
+                    if y_axis is None or y_axis == "null":
+                        if data_characteristics.get("numerical_columns"):
+                            y_axis = data_characteristics["numerical_columns"][0]
+                        elif available_columns:
+                            # Find a different column than x_axis
+                            y_axis = next((col for col in available_columns if col != x_axis), available_columns[0])
+                        else:
+                            # Skip this chart if we can't determine a valid y_axis
+                            continue
+                    
+                    # Ensure x_axis and y_axis are strings
+                    x_axis = str(x_axis) if x_axis is not None else ""
+                    y_axis = str(y_axis) if y_axis is not None else ""
+                    
+                    # Skip if either axis is empty after conversion
+                    if not x_axis or not y_axis:
+                        continue
+                    
+                    # Handle secondary_y_axis - ensure it's either None or a string
+                    secondary_y_axis = chart.get("secondary_y_axis")
+                    if secondary_y_axis == "null":
+                        secondary_y_axis = None
+                    elif secondary_y_axis is not None:
+                        secondary_y_axis = str(secondary_y_axis)
+                    
                     formatted_chart = {
-                        "chart_type": chart["chart_type"],
-                        "title": chart["title"],
-                        "description": chart.get("description", ""),
-                        "x_axis": chart["x_axis"],
-                        "y_axis": chart["y_axis"],
-                        "secondary_y_axis": chart.get("secondary_y_axis"),
+                        "chart_type": str(chart["chart_type"]),
+                        "title": str(chart["title"]),
+                        "description": str(chart.get("description", "")),
+                        "x_axis": x_axis,
+                        "y_axis": y_axis,
+                        "secondary_y_axis": secondary_y_axis,
                         "chart_config": chart.get("chart_config", {}),
                         "confidence_score": float(chart.get("confidence_score", 0.5))
                     }
