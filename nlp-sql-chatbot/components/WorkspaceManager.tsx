@@ -140,32 +140,32 @@ export default function WorkspaceManager({ onWorkspaceConnect }: WorkspaceManage
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-12 w-12 text-blue-400 animate-spin mx-auto mb-4" />
-          <p className="text-gray-800 dark:text-gray-300">Loading workspaces...</p>
+          <p className="text-gray-300">Loading workspaces...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+    <div className="min-h-screen bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+          <h1 className="text-4xl font-bold text-white mb-4">
             Welcome to NLP to SQL Assistant
           </h1>
-          <p className="text-xl text-gray-800 dark:text-gray-300 max-w-3xl mx-auto">
+          <p className="text-xl text-gray-300 max-w-3xl mx-auto">
             Connect to your databases and start querying with natural language
           </p>
         </div>
 
         {workspaces.length === 0 ? (
           <div className="text-center py-16">
-            <div className="bg-white dark:bg-gray-800 p-12 rounded-2xl shadow-xl max-w-2xl mx-auto border border-gray-200 dark:border-gray-700 transition-colors duration-300">
+            <div className="bg-gray-800 p-12 rounded-2xl shadow-xl max-w-2xl mx-auto border border-gray-700">
               <Database className="h-16 w-16 text-blue-400 mx-auto mb-6" />
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+              <h2 className="text-2xl font-bold text-white mb-4">
                 No Workspaces Found
               </h2>
-              <p className="text-gray-800 dark:text-gray-300 mb-8 text-lg">
+              <p className="text-gray-300 mb-8 text-lg">
                 Create your first workspace to connect to a database and start querying with natural language.
               </p>
               <button
@@ -180,7 +180,7 @@ export default function WorkspaceManager({ onWorkspaceConnect }: WorkspaceManage
         ) : (
           <div>
             <div className="flex justify-between items-center mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Your Workspaces</h2>
+              <h2 className="text-2xl font-bold text-white">Your Workspaces</h2>
               <button
                 onClick={() => setShowCreateForm(true)}
                 className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold rounded-xl hover:from-blue-600 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl"
@@ -194,7 +194,7 @@ export default function WorkspaceManager({ onWorkspaceConnect }: WorkspaceManage
               {workspaces.map((workspace) => (
                 <div
                   key={workspace._id}
-                  className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 overflow-hidden border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                  className="bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 overflow-hidden border border-gray-700 hover:border-gray-600"
                 >
                   <div className="p-6">
                     <div className="flex justify-between items-start mb-4">
@@ -203,14 +203,14 @@ export default function WorkspaceManager({ onWorkspaceConnect }: WorkspaceManage
                           <Database className="h-5 w-5 text-white" />
                         </div>
                         <div>
-                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{workspace.name}</h3>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">{workspace.db_connection.db_name}</p>
+                          <h3 className="text-lg font-semibold text-white">{workspace.name}</h3>
+                          <p className="text-sm text-gray-400">{workspace.db_connection.db_name}</p>
                         </div>
                       </div>
                       <div className="relative">
                         <button
                           onClick={() => setDropdownOpen(dropdownOpen === workspace._id ? null : workspace._id)}
-                          className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                          className="p-2 text-gray-400 hover:text-gray-300 hover:bg-gray-700 rounded-lg transition-colors"
                         >
                           <MoreVertical className="h-4 w-4" />
                         </button>
@@ -221,13 +221,13 @@ export default function WorkspaceManager({ onWorkspaceConnect }: WorkspaceManage
                               className="fixed inset-0 z-10" 
                               onClick={() => setDropdownOpen(null)}
                             />
-                            <div className="absolute right-0 mt-1 w-48 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-xl z-20 transition-colors duration-300">
+                            <div className="absolute right-0 mt-1 w-48 bg-gray-700 border border-gray-600 rounded-lg shadow-xl z-20">
                               <button
                                 onClick={() => {
                                   setEditingWorkspace(workspace);
                                   setDropdownOpen(null);
                                 }}
-                                className="flex items-center w-full px-4 py-2 text-sm text-gray-800 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 hover:text-gray-900 dark:hover:text-white transition-colors"
+                                className="flex items-center w-full px-4 py-2 text-sm text-gray-300 hover:bg-gray-600 hover:text-white transition-colors"
                               >
                                 <Edit className="h-4 w-4 mr-2" />
                                 Edit
@@ -237,7 +237,7 @@ export default function WorkspaceManager({ onWorkspaceConnect }: WorkspaceManage
                                   setShowSessions(workspace._id);
                                   setDropdownOpen(null);
                                 }}
-                                className="flex items-center w-full px-4 py-2 text-sm text-gray-800 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 hover:text-gray-900 dark:hover:text-white transition-colors"
+                                className="flex items-center w-full px-4 py-2 text-sm text-gray-300 hover:bg-gray-600 hover:text-white transition-colors"
                               >
                                 <History className="h-4 w-4 mr-2" />
                                 View Sessions
@@ -259,23 +259,23 @@ export default function WorkspaceManager({ onWorkspaceConnect }: WorkspaceManage
                     </div>
 
                     {workspace.description && (
-                      <p className="text-gray-600 dark:text-gray-400 text-sm mb-4 line-clamp-2">
+                      <p className="text-gray-400 text-sm mb-4 line-clamp-2">
                         {workspace.description}
                       </p>
                     )}
 
                     <div className="space-y-2 mb-6">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-600 dark:text-gray-400">Database:</span>
-                        <span className="text-gray-800 dark:text-gray-300 font-medium">{workspace.db_connection.db_type}</span>
+                        <span className="text-gray-400">Database:</span>
+                        <span className="text-gray-300 font-medium">{workspace.db_connection.db_type}</span>
                       </div>
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-600 dark:text-gray-400">Host:</span>
-                        <span className="text-gray-800 dark:text-gray-300 font-mono text-xs">{workspace.db_connection.host}:{workspace.db_connection.port}</span>
+                        <span className="text-gray-400">Host:</span>
+                        <span className="text-gray-300 font-mono text-xs">{workspace.db_connection.host}:{workspace.db_connection.port}</span>
                       </div>
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-600 dark:text-gray-400">Updated:</span>
-                        <span className="text-gray-800 dark:text-gray-300 text-xs">{formatDate(workspace.updated_at)}</span>
+                        <span className="text-gray-400">Updated:</span>
+                        <span className="text-gray-300 text-xs">{formatDate(workspace.updated_at)}</span>
                       </div>
                     </div>
 
@@ -309,7 +309,7 @@ export default function WorkspaceManager({ onWorkspaceConnect }: WorkspaceManage
       {/* Workspace Form Modal */}
       {(showCreateForm || editingWorkspace) && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto transition-colors duration-300">
+          <div className="bg-gray-800 rounded-xl border border-gray-700 shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <WorkspaceForm
               workspace={editingWorkspace}
               onSubmit={editingWorkspace ? 
@@ -328,7 +328,7 @@ export default function WorkspaceManager({ onWorkspaceConnect }: WorkspaceManage
       {/* Sessions List Modal */}
       {showSessions && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-2xl max-w-4xl w-full max-h-[90vh] transition-colors duration-300">
+          <div className="bg-gray-800 rounded-xl border border-gray-700 shadow-2xl max-w-4xl w-full max-h-[90vh]">
             <SessionsList
               workspaceId={showSessions}
               onClose={() => setShowSessions(null)}

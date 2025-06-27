@@ -11,8 +11,6 @@ import VerificationResult from './VerificationResult';
 import UserProfile from './UserProfile';
 import { executeQuery, getSessionInfo, getPaginatedResults, createSession, activateWorkspace, getSessionMessages, createSavedQuery, getSavedQueries, deleteSavedQuery, deleteAllSavedQueries, SavedQuery, SavedQueryCreate } from '../lib/api';
 import { useAuth } from '../lib/authContext';
-import { useTheme } from '../lib/themeContext';
-import ThemeToggle from './ThemeToggle';
 
 // PaginationInfo interface to match the API response
 interface PaginationInfo {
@@ -86,7 +84,6 @@ interface ChatBotProps {
 
 export default function ChatBot({ workspaceId, autoSessionId, onBackToWorkspaces }: ChatBotProps) {
   const { user, settings } = useAuth();
-  const { theme } = useTheme();
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome',
@@ -1033,21 +1030,21 @@ export default function ChatBot({ workspaceId, autoSessionId, onBackToWorkspaces
   }
 
   const sidebarWidth = sidebarCollapsed ? 'w-20' : 'w-80';
-  const sidebarClasses = `${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} ${sidebarWidth} fixed inset-y-0 left-0 z-50 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 pt-3 flex flex-col max-h-screen`;
+  const sidebarClasses = `${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} ${sidebarWidth} fixed inset-y-0 left-0 z-50 bg-gray-800 border-r border-gray-700 transition-all duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 pt-3 flex flex-col max-h-screen`;
 
   return (
-    <div className="flex h-full min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+    <div className="flex h-full min-h-screen bg-gray-900">
       {/* Sidebar */}
       <div className={sidebarClasses}>
-        <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between h-16 px-4 border-b border-gray-700">
           {!sidebarCollapsed && (
             <div className="flex items-center space-x-3 ">
               <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg">
                 <Database className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h1 className="text-sm font-semibold text-gray-900 dark:text-white">SQL Assistant</h1>
-                <p className="text-xs text-gray-500 dark:text-gray-400">AI-Powered Queries</p>
+                <h1 className="text-sm font-semibold text-white">SQL Assistant</h1>
+                <p className="text-xs text-gray-400">AI-Powered Queries</p>
               </div>
             </div>
           )}
@@ -1056,7 +1053,7 @@ export default function ChatBot({ workspaceId, autoSessionId, onBackToWorkspaces
             {/* Desktop collapse toggle */}
             <button
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="hidden lg:flex p-2 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              className="hidden lg:flex p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
             >
               {sidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
             </button>
@@ -1064,7 +1061,7 @@ export default function ChatBot({ workspaceId, autoSessionId, onBackToWorkspaces
             {/* Mobile close button */}
             <button
               onClick={() => setSidebarOpen(false)}
-              className="lg:hidden p-1 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
+              className="lg:hidden p-1 text-gray-400 hover:text-white transition-colors"
             >
               <X className="h-5 w-5" />
             </button>
@@ -1072,33 +1069,33 @@ export default function ChatBot({ workspaceId, autoSessionId, onBackToWorkspaces
         </div>
 
         {/* Connection Status */}
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700 py-8 flex-shrink-0">
+        <div className="p-4 border-b border-gray-700 py-8 flex-shrink-0">
           {sessionId ? (
-            <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-3'} bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-400 dark:border-emerald-500/20 rounded-lg p-3 transition-colors duration-300`}>
+            <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-3'} bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3`}>
               <div className="flex-shrink-0">
-                <Wifi className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                <Wifi className="h-4 w-4 text-emerald-400" />
               </div>
               {!sidebarCollapsed && (
                 <>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-emerald-800 dark:text-emerald-400">Connected</p>
-                    <p className="text-xs text-emerald-700 dark:text-emerald-300 truncate">
+                    <p className="text-sm font-medium text-emerald-400">Connected</p>
+                    <p className="text-xs text-emerald-300 truncate">
                       {sessionInfo?.db_info?.db_name || 'Active Session'}
                     </p>
                   </div>
-                  <div className="h-2 w-2 rounded-full bg-emerald-600 dark:bg-emerald-400 animate-pulse"></div>
+                  <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></div>
                 </>
               )}
             </div>
           ) : (
-            <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-3'} bg-gray-100 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg p-3`}>
+            <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-3'} bg-gray-700/50 border border-gray-600 rounded-lg p-3`}>
               <div className="flex-shrink-0">
-                <WifiOff className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                <WifiOff className="h-4 w-4 text-gray-400" />
               </div>
               {!sidebarCollapsed && (
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Disconnected</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-500">No active session</p>
+                  <p className="text-sm font-medium text-gray-400">Disconnected</p>
+                  <p className="text-xs text-gray-500">No active session</p>
                 </div>
               )}
             </div>
@@ -1116,15 +1113,15 @@ export default function ChatBot({ workspaceId, autoSessionId, onBackToWorkspaces
                 disabled={item.disabled}
                 className={`group w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'px-4'} py-3 text-sm font-medium rounded-xl transition-all duration-200 ${
                   item.disabled 
-                    ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed' 
-                    : 'text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700/60 hover:shadow-lg hover:scale-105'
+                    ? 'text-gray-500 cursor-not-allowed' 
+                    : 'text-gray-300 hover:text-white hover:bg-gray-700/60 hover:shadow-lg hover:scale-105'
                 }`}
                 title={sidebarCollapsed ? item.label : undefined}
               >
                 <IconComponent 
                   className={`${sidebarCollapsed ? '' : 'mr-4'} h-5 w-5 transition-colors ${
                     item.disabled 
-                      ? 'text-gray-400 dark:text-gray-600' 
+                      ? 'text-gray-600' 
                       : item.color
                   } ${item.spinning ? 'animate-spin' : ''}`} 
                 />
@@ -1138,7 +1135,7 @@ export default function ChatBot({ workspaceId, autoSessionId, onBackToWorkspaces
         <div className="p-4 flex-shrink-0">
           <button
             onClick={() => setShowUserProfile(true)}
-            className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-3'} p-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700/60 transition-all duration-200 hover:shadow-lg`}
+            className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-3'} p-3 rounded-xl hover:bg-gray-700/60 transition-all duration-200 hover:shadow-lg`}
             title={sidebarCollapsed ? `${user?.first_name || user?.email || 'User'} (${user?.role || 'member'})` : undefined}
           >
             <div className="h-9 w-9 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
@@ -1149,14 +1146,14 @@ export default function ChatBot({ workspaceId, autoSessionId, onBackToWorkspaces
             {!sidebarCollapsed && (
               <>
                 <div className="flex-1 min-w-0 text-left">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                  <p className="text-sm font-medium text-white truncate">
                     {user?.first_name || user?.email?.split('@')[0] || 'User'}
                   </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">
+                  <p className="text-xs text-gray-400 capitalize">
                     {user?.role || 'member'}
                   </p>
                 </div>
-                <User className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                <User className="h-4 w-4 text-gray-400" />
               </>
             )}
           </button>
@@ -1174,40 +1171,39 @@ export default function ChatBot({ workspaceId, autoSessionId, onBackToWorkspaces
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 min-h-0">
         {/* Header */}
-        <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 lg:px-6 py-4 flex-shrink-0">
+        <header className="bg-gray-800 border-b border-gray-700 px-4 lg:px-6 py-4 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-                              <button
-                  onClick={() => setSidebarOpen(true)}
-                  className="lg:hidden p-2 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                >
-                  <Menu className="h-5 w-5" />
-                </button>
-                <div className="flex items-center space-x-3">
-                  <MessageCircle className="h-6 w-6 text-blue-400" />
-                  <div>
-                    <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
-                      Natural Language Query
-                    </h1>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Ask questions about your data in plain English
-                    </p>
-                  </div>
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="lg:hidden p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+              <div className="flex items-center space-x-3">
+                <MessageCircle className="h-6 w-6 text-blue-400" />
+                <div>
+                  <h1 className="text-lg font-semibold text-white">
+                    Natural Language Query
+                  </h1>
+                  <p className="text-xs text-gray-400">
+                    Ask questions about your data in plain English
+                  </p>
                 </div>
+              </div>
             </div>
             
             <div className="flex items-center space-x-2">
-              <div className="hidden sm:flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
+              <div className="hidden sm:flex items-center space-x-2 text-xs text-gray-400">
                 <Activity className="h-4 w-4" />
                 <span>Live Session</span>
               </div>
-              <ThemeToggle size="sm" />
             </div>
           </div>
         </header>
         
         {/* Chat Messages */}
-        <div ref={messagesContainerRef} className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900 chat-scroll min-h-0 max-h-[70vh] transition-colors duration-300">
+        <div ref={messagesContainerRef} className="flex-1 overflow-y-auto bg-gray-900 chat-scroll min-h-0 max-h-[70vh]">
           <div className="max-w-6xl mx-auto px-4 lg:px-8 py-6">
             <div className="space-y-6">
               {messages.map((message, index) => {
@@ -1339,13 +1335,13 @@ export default function ChatBot({ workspaceId, autoSessionId, onBackToWorkspaces
             
             {isProcessing && (
               <div className="flex items-center justify-center py-8 animate-in fade-in duration-300">
-                <div className="flex items-center space-x-3 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm px-6 py-3 rounded-xl border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center space-x-3 bg-gray-800/80 backdrop-blur-sm px-6 py-3 rounded-xl border border-gray-700">
                   <div className="flex space-x-1">
                     <div className="h-2 w-2 rounded-full bg-blue-400 animate-bounce"></div>
                     <div className="h-2 w-2 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: '0.1s' }}></div>
                     <div className="h-2 w-2 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                   </div>
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Processing your query...</span>
+                  <span className="text-sm font-medium text-gray-300">Processing your query...</span>
                 </div>
               </div>
             )}
@@ -1353,7 +1349,7 @@ export default function ChatBot({ workspaceId, autoSessionId, onBackToWorkspaces
         </div>
         
         {/* Input Area */}
-        <div className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 p-4 lg:p-6 flex-shrink-0 transition-colors duration-300">
+        <div className="bg-gray-800 border-t border-gray-700 p-4 lg:p-6 flex-shrink-0">
           <div className="max-w-6xl mx-auto">
             {/* Speech Error Display */}
             {speechError && (
@@ -1363,14 +1359,14 @@ export default function ChatBot({ workspaceId, autoSessionId, onBackToWorkspaces
             )}
             
             <form onSubmit={handleSendMessage} className="relative">
-              <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-xl border border-gray-300 dark:border-gray-600 overflow-hidden transition-all duration-300 hover:border-gray-400 dark:hover:border-gray-500 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500">
+              <div className="flex items-center bg-gray-700 rounded-xl border border-gray-600 overflow-hidden transition-all duration-300 hover:border-gray-500 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500">
                 <input
                   ref={inputRef}
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder={isListening ? "Listening... Speak now" : "Ask me anything about your data..."}
-                  className="flex-1 py-4 px-6 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 bg-transparent focus:outline-none"
+                  className="flex-1 py-4 px-6 text-gray-100 placeholder-gray-400 bg-transparent focus:outline-none"
                   disabled={isProcessing || isListening}
                 />
                 
@@ -1426,20 +1422,20 @@ export default function ChatBot({ workspaceId, autoSessionId, onBackToWorkspaces
             )}
             
             {!sessionId && !isListening && (
-              <p className="text-center text-sm text-gray-600 dark:text-gray-500 mt-3">
+              <p className="text-center text-sm text-gray-500 mt-3">
                 💡 Connect to a database for persistent context and better results
               </p>
             )}
             
             {/* Voice Recognition Info */}
             {speechSupported && !isListening && !speechError && (
-              <p className="text-center text-sm text-gray-600 dark:text-gray-500 mt-2">
-                🎤 Click the microphone button or press <span className="text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-700 px-1 py-0.5 rounded text-xs font-mono">Ctrl+Shift+V</span> to use voice input
+              <p className="text-center text-sm text-gray-500 mt-2">
+                🎤 Click the microphone button or press <span className="text-gray-400 bg-gray-700 px-1 py-0.5 rounded text-xs font-mono">Ctrl+Shift+V</span> to use voice input
               </p>
             )}
             
             {!speechSupported && (
-              <p className="text-center text-sm text-orange-500 dark:text-orange-400 mt-2">
+              <p className="text-center text-sm text-orange-400 mt-2">
                 ⚠️ Voice input not supported in your browser
               </p>
             )}

@@ -2,11 +2,15 @@ import os
 from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
 import uuid
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain_core.documents import Document
 
 # Load environment variables
 load_dotenv()
+
+# Google API key for embeddings
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 # Base directory for vector stores
 VECTOR_STORE_DIR = os.getenv("VECTOR_STORE_DIR", "./vector_stores")
@@ -17,7 +21,10 @@ class VectorStoreManager:
     
     def __init__(self):
         """Initialize the vector store manager"""
-        # Use Chroma's default embedding model
+        self.embedding_function = GoogleGenerativeAIEmbeddings(
+            model="models/gemini-embedding-exp-03-07",
+            google_api_key=GOOGLE_API_KEY,
+        )
         
         # Keep track of active stores to properly close them
         self.active_stores = {}
@@ -34,9 +41,10 @@ class VectorStoreManager:
         store_dir = os.path.join(VECTOR_STORE_DIR, vector_store_id)
         os.makedirs(store_dir, exist_ok=True)
         
-        # Initialize an empty vector store with default embeddings
+        # Initialize an empty vector store
         Chroma(
             persist_directory=store_dir,
+            embedding_function=self.embedding_function,
             collection_name=f"session_{session_id}"
         )
         
@@ -53,9 +61,10 @@ class VectorStoreManager:
         if vector_store_id in self.active_stores:
             return self.active_stores[vector_store_id]
         
-        # Create and cache the store with default embeddings
+        # Create and cache the store
         store = Chroma(
             persist_directory=store_dir,
+            embedding_function=self.embedding_function,
             collection_name=f"session_{session_id}"
         )
         

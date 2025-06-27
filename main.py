@@ -23,11 +23,10 @@ def setup_environment() -> bool:
     load_dotenv()  # Load environment variables from .env file
     
     # Check for required environment variables
-    azure_openai_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
-    azure_openai_api_key = os.getenv("AZURE_OPENAI_API_KEY")
-    if not azure_openai_endpoint or not azure_openai_api_key:
-        print("Error: AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_API_KEY environment variables must be set.")
-        print("Please set them in a .env file.")
+    google_api_key = os.getenv("GOOGLE_API_KEY")
+    if not google_api_key:
+        print("Error: GOOGLE_API_KEY environment variable not set.")
+        print("Please set it in a .env file.")
         return False
     
     return True
@@ -272,7 +271,7 @@ def main():
         return
     
     # Initialize SQL generator
-    model_name = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-4")
+    model_name = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
     sql_generator = SmartSQLGenerator(db_analyzer, model_name=model_name)
     
     # Main menu

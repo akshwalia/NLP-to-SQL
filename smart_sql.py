@@ -6,12 +6,13 @@ import re
 import uuid
 from typing import Dict, List, Optional, Tuple, Any, Union
 
-import openai
+import google.generativeai as genai
 from dotenv import load_dotenv
-from langchain_openai import AzureChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.chains import LLMChain
 from langchain_core.runnables import RunnableSequence
 from langchain.prompts import PromptTemplate
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from langchain.schema.memory import BaseMemory
@@ -34,7 +35,7 @@ class SmartSQLGenerator:
     def __init__(
         self,
         db_analyzer: DatabaseAnalyzer,
-        model_name: str = "gpt-4",
+        model_name: str = "gemini-2.0-flash",
         use_cache: bool = True,
         cache_file: str = "query_cache.json",
         use_memory: bool = True,
@@ -73,30 +74,21 @@ class SmartSQLGenerator:
             "multi_query_results": []  # Store results from multiple queries
         }
         
-        # Initialize Azure OpenAI
-        self.azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
-        self.api_key = os.getenv("AZURE_OPENAI_API_KEY")
-        self.api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-15-preview")
-        self.deployment_name = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", model_name)
+        # Initialize the AI model
+        api_key = os.getenv("GOOGLE_API_KEY")
+        if not api_key:
+            raise ValueError("GOOGLE_API_KEY environment variable not set")
         
-        if not self.azure_endpoint or not self.api_key:
-            raise ValueError("AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_API_KEY environment variables must be set")
+        # Configure Google Gemini
+        genai.configure(api_key=api_key)
         
-        # Configure Azure OpenAI
-        openai.api_type = "azure"
-        openai.api_base = self.azure_endpoint
-        openai.api_version = self.api_version
-        openai.api_key = self.api_key
-        
-        # Initialize LangChain with Azure OpenAI
+        # Initialize LangChain with Gemini
         # Note: Langfuse 3.x doesn't support LangChain callbacks
         # Use @observe decorators on methods instead
-        self.llm = AzureChatOpenAI(
-            azure_endpoint=self.azure_endpoint,
-            azure_deployment=self.deployment_name,
-            api_version=self.api_version,
-            api_key=self.api_key,
-            temperature=0
+        self.llm = ChatGoogleGenerativeAI(
+            model=model_name,
+            temperature=0, 
+            google_api_key=api_key
         )
         
         # Initialize memory system if enabled
@@ -461,11 +453,16 @@ IMPORTANT: Return ONLY the JSON object above with your actual values. Do not inc
             # Ensure the directory exists
             os.makedirs(persist_dir, exist_ok=True)
             
-            # Use Chroma's default embedding model (no explicit embedding function needed)
+            # Initialize embeddings with the specified model
+            embedding_function = GoogleGenerativeAIEmbeddings(
+                model="models/gemini-embedding-exp-03-07",
+                google_api_key=os.getenv("GOOGLE_API_KEY"),
+            )
             
-            # Create or load the vector store with default embeddings
+            # Create or load the vector store
             vectorstore = Chroma(
                 persist_directory=persist_dir,
+                embedding_function=embedding_function,
                 collection_name="sql_conversation_memory"
             )
             
