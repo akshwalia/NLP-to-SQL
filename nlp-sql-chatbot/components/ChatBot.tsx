@@ -357,7 +357,7 @@ export default function ChatBot({ workspaceId, autoSessionId, onBackToWorkspaces
             };
           }
           // Case 2: Multiple queries in edit mode
-          else if (settings?.edit_mode) {
+          else if (settings?.settings?.edit_mode_enabled) {
             const splitQueries = result.sql.split('<----->').map((q: string) => q.trim()).filter((q: string) => q);
             if (splitQueries.length > 1) {
               shouldShowEditor = true;
@@ -1001,10 +1001,10 @@ export default function ChatBot({ workspaceId, autoSessionId, onBackToWorkspaces
   }
 
   const sidebarWidth = sidebarCollapsed ? 'w-20' : 'w-80';
-  const sidebarClasses = `${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} ${sidebarWidth} fixed inset-y-0 left-0 z-50 bg-gray-800 border-r border-gray-700 transition-all duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 pt-3`;
+  const sidebarClasses = `${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} ${sidebarWidth} fixed inset-y-0 left-0 z-50 bg-gray-800 border-r border-gray-700 transition-all duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 pt-3 flex flex-col max-h-screen`;
 
   return (
-    <div className="flex h-screen bg-gray-900">
+    <div className="flex h-full min-h-screen bg-gray-900">
       {/* Sidebar */}
       <div className={sidebarClasses}>
         <div className="flex items-center justify-between h-16 px-4 border-b border-gray-700">
@@ -1040,7 +1040,7 @@ export default function ChatBot({ workspaceId, autoSessionId, onBackToWorkspaces
         </div>
 
         {/* Connection Status */}
-        <div className="p-4 border-b border-gray-700 py-8">
+        <div className="p-4 border-b border-gray-700 py-8 flex-shrink-0">
           {sessionId ? (
             <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-3'} bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3`}>
               <div className="flex-shrink-0">
@@ -1074,7 +1074,7 @@ export default function ChatBot({ workspaceId, autoSessionId, onBackToWorkspaces
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-4 py-8 space-y-8">
+        <nav className="flex-1 px-4 py-8 space-y-8 overflow-y-auto min-h-0">
           {navigationItems.map((item) => {
             const IconComponent = item.icon;
             return (
@@ -1103,7 +1103,7 @@ export default function ChatBot({ workspaceId, autoSessionId, onBackToWorkspaces
         </nav>
 
         {/* User Info */}
-        <div className="p-4">
+        <div className="p-4 flex-shrink-0">
           <button
             onClick={() => setShowUserProfile(true)}
             className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-3'} p-3 rounded-xl hover:bg-gray-700/60 transition-all duration-200 hover:shadow-lg`}
@@ -1140,9 +1140,9 @@ export default function ChatBot({ workspaceId, autoSessionId, onBackToWorkspaces
       )}
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 min-h-0">
         {/* Header */}
-        <header className="bg-gray-800 border-b border-gray-700 px-4 lg:px-6 py-4">
+        <header className="bg-gray-800 border-b border-gray-700 px-4 lg:px-6 py-4 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <button
@@ -1174,7 +1174,7 @@ export default function ChatBot({ workspaceId, autoSessionId, onBackToWorkspaces
         </header>
         
         {/* Chat Messages */}
-        <div ref={messagesContainerRef} className="flex-1 overflow-y-auto bg-gray-900 chat-scroll">
+        <div ref={messagesContainerRef} className="flex-1 overflow-y-auto bg-gray-900 chat-scroll min-h-0 max-h-[70vh]">
           <div className="max-w-6xl mx-auto px-4 lg:px-8 py-6">
             <div className="space-y-6">
               {messages.map((message, index) => {
@@ -1320,7 +1320,7 @@ export default function ChatBot({ workspaceId, autoSessionId, onBackToWorkspaces
         </div>
         
         {/* Input Area */}
-        <div className="bg-gray-800 border-t border-gray-700 p-4 lg:p-6">
+        <div className="bg-gray-800 border-t border-gray-700 p-4 lg:p-6 flex-shrink-0">
           <div className="max-w-6xl mx-auto">
             {/* Speech Error Display */}
             {speechError && (
