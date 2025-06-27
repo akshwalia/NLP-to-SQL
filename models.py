@@ -221,23 +221,38 @@ class QueryResult(BaseModel):
     
     @field_validator('results', 'pagination', 'tables', mode='before')
     @classmethod
-    def convert_decimals(cls, v):
-        """Convert Decimal objects to float for JSON serialization"""
+    def convert_non_serializable(cls, v):
+        """Convert non-serializable objects (Decimal, timedelta, datetime) for JSON serialization"""
         if v is None:
             return v
-        return cls._convert_decimals_recursive(v)
+        return cls._convert_non_serializable_recursive(v)
     
     @staticmethod
-    def _convert_decimals_recursive(obj):
-        """Recursively convert Decimal objects to float"""
+    def _convert_non_serializable_recursive(obj):
+        """Recursively convert non-serializable objects"""
+        from datetime import datetime, timedelta
+        
         if isinstance(obj, Decimal):
             return float(obj)
+        elif isinstance(obj, timedelta):
+            # Convert timedelta to total seconds for consistent serialization
+            return {
+                "__type__": "timedelta",
+                "total_seconds": obj.total_seconds(),
+                "days": obj.days,
+                "seconds": obj.seconds,
+                "microseconds": obj.microseconds,
+                "str_representation": str(obj)
+            }
+        elif isinstance(obj, datetime):
+            # Ensure datetime objects are ISO formatted strings
+            return obj.isoformat()
         elif isinstance(obj, dict):
-            return {key: QueryResult._convert_decimals_recursive(value) for key, value in obj.items()}
+            return {key: QueryResult._convert_non_serializable_recursive(value) for key, value in obj.items()}
         elif isinstance(obj, list):
-            return [QueryResult._convert_decimals_recursive(item) for item in obj]
+            return [QueryResult._convert_non_serializable_recursive(item) for item in obj]
         elif isinstance(obj, tuple):
-            return tuple(QueryResult._convert_decimals_recursive(item) for item in obj)
+            return tuple(QueryResult._convert_non_serializable_recursive(item) for item in obj)
         else:
             return obj
 
@@ -341,23 +356,38 @@ class SavedQuery(BaseModel):
     
     @field_validator('data', mode='before')
     @classmethod
-    def convert_decimals(cls, v):
-        """Convert Decimal objects to float for JSON serialization"""
+    def convert_non_serializable(cls, v):
+        """Convert non-serializable objects (Decimal, timedelta, datetime) for JSON serialization"""
         if v is None:
             return v
-        return cls._convert_decimals_recursive(v)
+        return cls._convert_non_serializable_recursive(v)
     
     @staticmethod
-    def _convert_decimals_recursive(obj):
-        """Recursively convert Decimal objects to float"""
+    def _convert_non_serializable_recursive(obj):
+        """Recursively convert non-serializable objects"""
+        from datetime import datetime, timedelta
+        
         if isinstance(obj, Decimal):
             return float(obj)
+        elif isinstance(obj, timedelta):
+            # Convert timedelta to total seconds for consistent serialization
+            return {
+                "__type__": "timedelta",
+                "total_seconds": obj.total_seconds(),
+                "days": obj.days,
+                "seconds": obj.seconds,
+                "microseconds": obj.microseconds,
+                "str_representation": str(obj)
+            }
+        elif isinstance(obj, datetime):
+            # Ensure datetime objects are ISO formatted strings
+            return obj.isoformat()
         elif isinstance(obj, dict):
-            return {key: SavedQuery._convert_decimals_recursive(value) for key, value in obj.items()}
+            return {key: SavedQuery._convert_non_serializable_recursive(value) for key, value in obj.items()}
         elif isinstance(obj, list):
-            return [SavedQuery._convert_decimals_recursive(item) for item in obj]
+            return [SavedQuery._convert_non_serializable_recursive(item) for item in obj]
         elif isinstance(obj, tuple):
-            return tuple(SavedQuery._convert_decimals_recursive(item) for item in obj)
+            return tuple(SavedQuery._convert_non_serializable_recursive(item) for item in obj)
         else:
             return obj
     

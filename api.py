@@ -72,16 +72,31 @@ active_workspaces: Dict[str, Dict[str, Any]] = {}
 SESSION_TIMEOUT = 60  # 1 hour
 
 
-def convert_decimals_to_float(obj):
-    """Recursively convert Decimal objects to float for JSON serialization"""
+def convert_non_serializable_objects(obj):
+    """Recursively convert non-serializable objects (Decimal, timedelta, datetime) for JSON/MongoDB serialization"""
+    from datetime import datetime, timedelta
+    
     if isinstance(obj, Decimal):
         return float(obj)
+    elif isinstance(obj, timedelta):
+        # Convert timedelta to a dictionary for MongoDB compatibility
+        return {
+            "__type__": "timedelta",
+            "total_seconds": obj.total_seconds(),
+            "days": obj.days,
+            "seconds": obj.seconds,
+            "microseconds": obj.microseconds,
+            "str_representation": str(obj)
+        }
+    elif isinstance(obj, datetime):
+        # Ensure datetime objects are ISO formatted strings
+        return obj.isoformat()
     elif isinstance(obj, dict):
-        return {key: convert_decimals_to_float(value) for key, value in obj.items()}
+        return {key: convert_non_serializable_objects(value) for key, value in obj.items()}
     elif isinstance(obj, list):
-        return [convert_decimals_to_float(item) for item in obj]
+        return [convert_non_serializable_objects(item) for item in obj]
     elif isinstance(obj, tuple):
-        return tuple(convert_decimals_to_float(item) for item in obj)
+        return tuple(convert_non_serializable_objects(item) for item in obj)
     else:
         return obj
 
@@ -881,8 +896,8 @@ async def query_with_session(
             edit_mode_enabled=current_user.settings.edit_mode_enabled
         )
         
-        # Convert any Decimal objects to float for MongoDB compatibility
-        converted_result = convert_decimals_to_float(result)
+        # Convert any non-serializable objects for MongoDB compatibility
+        converted_result = convert_non_serializable_objects(result)
         
         # Create QueryResult object from the execution result
         query_result = QueryResult(
@@ -1174,8 +1189,8 @@ async def execute_sql_query(
         # Execute the SQL query with automatic schema updates
         result = sql_generator.execute_edit_query_with_schema_update(execute_req.sql)
         
-        # Convert any Decimal objects to float for MongoDB compatibility
-        converted_result = convert_decimals_to_float(result)
+        # Convert any non-serializable objects for MongoDB compatibility
+        converted_result = convert_non_serializable_objects(result)
         
         # Create QueryResult object from the execution result
         query_result = QueryResult(
