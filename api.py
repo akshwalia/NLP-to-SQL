@@ -252,7 +252,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 @app.get("/auth/me", response_model=User)
 async def get_current_user_info(current_user: User = Depends(get_current_active_user)):
     """Get current user information"""
-    print("User Logged in: ", current_user.first_name)
+    print("User Logged in: ", current_user)
     return current_user
 
 
