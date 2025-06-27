@@ -2054,6 +2054,11 @@ Provide a thorough analysis that directly answers why the observed trend is happ
         # Generate text response based on SQL and results
         text_result = self.generate_text_response(question, sql, results if success else None)
         
+        # Generate chart recommendations if successful query with results
+        visualization_recommendations = None
+        if success and results and len(results) > 0:
+            visualization_recommendations = self.generate_chart_recommendations(question, sql, results, database_type="general")
+        
         # Store in memory if successful or even if failed (to remember errors too)
         if self.use_memory:
             self._store_in_memory(question, sql, results if success else None)
@@ -2074,7 +2079,8 @@ Provide a thorough analysis that directly answers why the observed trend is happ
             "fix_attempts": attempts,
             "execution_time": generation_result.get("execution_time", 0),
             "results": paginated_results,
-            "text": text_result.get("text", "")
+            "text": text_result.get("text", ""),
+            "visualization_recommendations": visualization_recommendations
         }
         
         # Add pagination metadata if applicable
@@ -3177,6 +3183,310 @@ Respond with ONLY one of these two words:
                 result["warning"] = "Query executed successfully but schema context refresh failed. Future queries may not reflect schema changes."
         
         return result
+
+    @observe_function("chart_recommendations")
+    def generate_chart_recommendations(self, question: str, sql: str, results: List[Dict[str, Any]], database_type: str = None) -> Dict[str, Any]:
+        """
+        Generate chart recommendations based on the query results using LLM
+        
+        Args:
+            question: Original natural language question
+            sql: Generated SQL query
+            results: Query results
+            database_type: Type of database/domain for context
+            
+        Returns:
+            Dictionary with visualization recommendations
+        """
+        if not results or len(results) == 0:
+            return {
+                "is_visualizable": False,
+                "reason": "No data returned from query",
+                "recommended_charts": [],
+                "database_type": database_type,
+                "data_characteristics": None
+            }
+        
+        try:
+            # Analyze data characteristics
+            data_characteristics = self._analyze_data_characteristics(results)
+            print(f"[DEBUG] Data characteristics: {data_characteristics}")
+            
+            # Prepare prompt for LLM
+            chart_recommendation_prompt = self._create_chart_recommendation_prompt()
+            
+            # Create context for the LLM
+            context = {
+                "question": question,
+                "sql": sql,
+                "data_sample": results[:5] if len(results) > 5 else results,  # First 5 rows
+                "total_rows": len(results),
+                "columns": list(results[0].keys()) if results else [],
+                "data_characteristics": data_characteristics,
+                "database_type": database_type or "general"
+            }
+            print(f"[DEBUG] Chart recommendation context: {context}")
+            
+            # Generate recommendations using LLM
+            chain = chart_recommendation_prompt | self.llm
+            response = chain.invoke(context)
+            
+            # Parse the LLM response
+            response_text = self._extract_response_content(response)
+            print(f"[DEBUG] LLM response for chart recommendations: {response_text}")
+            
+            # Parse JSON response from LLM
+            import json
+            try:
+                recommendations_data = json.loads(response_text)
+            except json.JSONDecodeError:
+                # Fallback: try to extract JSON from response
+                import re
+                json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
+                if json_match:
+                    recommendations_data = json.loads(json_match.group())
+                else:
+                    # If parsing fails, create basic recommendations
+                    recommendations_data = self._create_fallback_recommendations(data_characteristics, results)
+            
+            # Validate and format recommendations
+            formatted_recommendations = self._format_chart_recommendations(recommendations_data, data_characteristics)
+            print(f"[DEBUG] Final formatted recommendations: {formatted_recommendations}")
+            
+            return formatted_recommendations
+            
+        except Exception as e:
+            print(f"[DEBUG] Error generating chart recommendations: {e}")
+            # Return fallback recommendations
+            fallback = self._create_fallback_recommendations(data_characteristics if 'data_characteristics' in locals() else {}, results)
+            print(f"[DEBUG] Using fallback recommendations: {fallback}")
+            return fallback
+
+    def _create_chart_recommendation_prompt(self):
+        """Create the prompt template for chart recommendations"""
+        from langchain.prompts import PromptTemplate
+        
+        return PromptTemplate(
+            input_variables=["question", "sql", "data_sample", "total_rows", "columns", "data_characteristics", "database_type"],
+            template="""You are an expert data visualization analyst. Based on the query and data provided, recommend the most appropriate charts for business analysis.
+
+Business Question: {question}
+SQL Query: {sql}
+Database Type: {database_type}
+Total Rows: {total_rows}
+Available Columns: {columns}
+
+Data Sample:
+{data_sample}
+
+Data Characteristics:
+{data_characteristics}
+
+Please analyze this data and provide visualization recommendations in the following JSON format:
+
+{{
+    "is_visualizable": true/false,
+    "reason": "explanation if not visualizable (null if visualizable)",
+    "recommended_charts": [
+        {{
+            "chart_type": "bar/line/pie/donut/scatter/area/bubble/composed/radial/treemap/funnel/gauge/waterfall/heatmap/pyramid",
+            "title": "Descriptive chart title",
+            "description": "Why this chart is recommended for business analysis",
+            "x_axis": "column_name_for_x_axis",
+            "y_axis": "column_name_for_y_axis", 
+            "secondary_y_axis": "optional_secondary_column",
+            "chart_config": {{
+                "color_scheme": "suggested color scheme",
+                "aggregation": "sum/count/avg/max/min if needed"
+            }},
+            "confidence_score": 0.85
+        }}
+    ],
+    "database_type": "{database_type}",
+    "data_characteristics": {{
+        "numerical_columns": ["list of numerical columns"],
+        "categorical_columns": ["list of categorical columns"], 
+        "date_columns": ["list of date columns"],
+        "unique_categories": number_of_unique_values_in_categorical_data
+    }}
+}}
+
+IMPORTANT GUIDELINES:
+1. Only recommend charts that make business sense for the data
+2. For simple ID lists or metadata-only queries, set is_visualizable to false
+3. Prioritize charts that show trends, comparisons, or distributions
+4. For time series data, prefer line/area charts
+5. For categorical comparisons, prefer bar/donut charts  
+6. For correlation analysis, prefer scatter/bubble charts
+7. Consider the database type (e-commerce, financial, HR, etc.) for context
+8. Provide 1-3 chart recommendations maximum
+9. Each chart should have a clear business purpose
+10. Set confidence_score based on how well the chart fits the data
+
+Return ONLY the JSON object with no additional text or formatting."""
+        )
+
+    def _analyze_data_characteristics(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Analyze the characteristics of the query results"""
+        if not results:
+            return {}
+        
+        characteristics = {
+            "numerical_columns": [],
+            "categorical_columns": [],
+            "date_columns": [],
+            "row_count": len(results),
+            "unique_categories": {}
+        }
+        
+        # Analyze each column
+        for column in results[0].keys():
+            values = [row.get(column) for row in results if row.get(column) is not None]
+            if not values:
+                continue
+                
+            # Check if numerical
+            is_numerical = True
+            try:
+                numeric_values = [float(v) for v in values if v is not None]
+                if len(numeric_values) == len(values):
+                    characteristics["numerical_columns"].append(column)
+                    continue
+            except (ValueError, TypeError):
+                is_numerical = False
+            
+            # Check if date
+            is_date = True
+            try:
+                from datetime import datetime
+                for value in values[:5]:  # Sample first 5 values
+                    if value is not None:
+                        if isinstance(value, str):
+                            datetime.fromisoformat(value.replace('Z', '+00:00'))
+                        elif not isinstance(value, datetime):
+                            is_date = False
+                            break
+                if is_date:
+                    characteristics["date_columns"].append(column)
+                    continue
+            except (ValueError, TypeError):
+                is_date = False
+            
+            # Otherwise, it's categorical
+            characteristics["categorical_columns"].append(column)
+            unique_values = set(str(v) for v in values if v is not None)
+            characteristics["unique_categories"][column] = len(unique_values)
+        
+        return characteristics
+
+    def _create_fallback_recommendations(self, data_characteristics: Dict, results: List[Dict]) -> Dict[str, Any]:
+        """Create basic fallback recommendations when LLM fails"""
+        if not results or len(results) == 0:
+            return {
+                "is_visualizable": False,
+                "reason": "No data available for visualization",
+                "recommended_charts": [],
+                "database_type": "general",
+                "data_characteristics": data_characteristics
+            }
+        
+        numerical_cols = data_characteristics.get("numerical_columns", [])
+        categorical_cols = data_characteristics.get("categorical_columns", [])
+        date_cols = data_characteristics.get("date_columns", [])
+        
+        # Simple logic for fallback recommendations
+        recommendations = []
+        
+        if len(numerical_cols) >= 1 and len(categorical_cols) >= 1:
+            # Basic bar chart recommendation
+            recommendations.append({
+                "chart_type": "bar",
+                "title": f"{numerical_cols[0]} by {categorical_cols[0]}",
+                "description": "Bar chart showing values across categories",
+                "x_axis": categorical_cols[0],
+                "y_axis": numerical_cols[0],
+                "secondary_y_axis": None,
+                "chart_config": {"color_scheme": "blue"},
+                "confidence_score": 0.7
+            })
+        elif len(numerical_cols) >= 2:
+            # If we have multiple numerical columns, suggest a scatter plot
+            recommendations.append({
+                "chart_type": "scatter",
+                "title": f"{numerical_cols[1]} vs {numerical_cols[0]}",
+                "description": "Scatter plot showing correlation between values",
+                "x_axis": numerical_cols[0],
+                "y_axis": numerical_cols[1],
+                "secondary_y_axis": None,
+                "chart_config": {"color_scheme": "blue"},
+                "confidence_score": 0.6
+            })
+        elif len(categorical_cols) >= 1 and len(numerical_cols) >= 1:
+            # Pie chart for categorical distribution
+            recommendations.append({
+                "chart_type": "pie",
+                "title": f"Distribution of {numerical_cols[0]} by {categorical_cols[0]}",
+                "description": "Pie chart showing distribution across categories",
+                "x_axis": categorical_cols[0],
+                "y_axis": numerical_cols[0],
+                "secondary_y_axis": None,
+                "chart_config": {"color_scheme": "multi"},
+                "confidence_score": 0.6
+            })
+        
+        if len(date_cols) >= 1 and len(numerical_cols) >= 1:
+            # Time series line chart
+            recommendations.append({
+                "chart_type": "line", 
+                "title": f"{numerical_cols[0]} over time",
+                "description": "Line chart showing trends over time",
+                "x_axis": date_cols[0],
+                "y_axis": numerical_cols[0],
+                "secondary_y_axis": None,
+                "chart_config": {"color_scheme": "blue"},
+                "confidence_score": 0.8
+            })
+        
+        return {
+            "is_visualizable": len(recommendations) > 0,
+            "reason": None if len(recommendations) > 0 else "Data structure not suitable for visualization",
+            "recommended_charts": recommendations,
+            "database_type": "general", 
+            "data_characteristics": data_characteristics
+        }
+
+    def _format_chart_recommendations(self, recommendations_data: Dict, data_characteristics: Dict) -> Dict[str, Any]:
+        """Format and validate chart recommendations from LLM response"""
+        try:
+            # Ensure required fields exist
+            formatted = {
+                "is_visualizable": recommendations_data.get("is_visualizable", False),
+                "reason": recommendations_data.get("reason"),
+                "recommended_charts": [],
+                "database_type": recommendations_data.get("database_type", "general"),
+                "data_characteristics": recommendations_data.get("data_characteristics", data_characteristics)
+            }
+            
+            # Format recommended charts
+            for chart in recommendations_data.get("recommended_charts", []):
+                if isinstance(chart, dict) and all(key in chart for key in ["chart_type", "title", "x_axis", "y_axis"]):
+                    formatted_chart = {
+                        "chart_type": chart["chart_type"],
+                        "title": chart["title"],
+                        "description": chart.get("description", ""),
+                        "x_axis": chart["x_axis"],
+                        "y_axis": chart["y_axis"],
+                        "secondary_y_axis": chart.get("secondary_y_axis"),
+                        "chart_config": chart.get("chart_config", {}),
+                        "confidence_score": float(chart.get("confidence_score", 0.5))
+                    }
+                    formatted["recommended_charts"].append(formatted_chart)
+            
+            return formatted
+            
+        except Exception as e:
+            print(f"Error formatting chart recommendations: {e}")
+            return self._create_fallback_recommendations(data_characteristics, [])
 
 
 if __name__ == "__main__":

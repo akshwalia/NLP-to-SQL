@@ -59,6 +59,8 @@ interface ChatMessage {
     error?: string;
     pagination?: PaginationInfo;
     table_id?: string;
+    visualization_recommendations?: any; // Add LLM chart recommendations
+    saved_charts?: any[]; // Add saved charts
   };
   analysisResult?: {
     tables: TableInfo[];
@@ -334,7 +336,7 @@ export default function ChatBot({ workspaceId, autoSessionId, onBackToWorkspaces
       
       let responseMessage = result.text || result.message || 'Query executed successfully.';
       const botMessage: ChatMessage = {
-        id: `response-${Date.now()}`,
+        id: result.assistant_message?._id || `response-${Date.now()}`, // Use real message ID from API
         isUser: false,
         text: responseMessage,
         timestamp: new Date(),
@@ -349,6 +351,8 @@ export default function ChatBot({ workspaceId, autoSessionId, onBackToWorkspaces
           error: result.error,
           pagination: result.pagination,
           table_id: result.table_id || result.pagination?.table_id,
+          visualization_recommendations: result.visualization_recommendations,
+          saved_charts: result.saved_charts,
         };
         
         // Add verification result if available (only for new messages, not loaded ones)
@@ -477,7 +481,10 @@ export default function ChatBot({ workspaceId, autoSessionId, onBackToWorkspaces
                 ...msg.sqlResult,
                 data: result.results || result.data, // Use results field from pagination response
                 pagination: result.pagination,
-                table_id: currentTableId
+                table_id: currentTableId,
+                // Explicitly preserve chart-related fields during pagination
+                visualization_recommendations: msg.sqlResult.visualization_recommendations,
+                saved_charts: msg.sqlResult.saved_charts,
               }
             };
           } else if (msg.id === messageId && msg.analysisResult) {
@@ -691,6 +698,8 @@ export default function ChatBot({ workspaceId, autoSessionId, onBackToWorkspaces
             error: queryResult.error,
             pagination: queryResult.pagination,
             table_id: queryResult.pagination?.table_id,
+            visualization_recommendations: queryResult.visualization_recommendations,
+            saved_charts: queryResult.saved_charts,
           } : undefined,
           analysisResult: queryResult && queryResult.tables ? {
             tables: queryResult.tables || [],
@@ -806,6 +815,8 @@ export default function ChatBot({ workspaceId, autoSessionId, onBackToWorkspaces
           sql: result.sql || '',
           data: result.data || result.results || [],
           error: result.success ? undefined : (result.error || 'Execution failed'),
+          visualization_recommendations: result.visualization_recommendations,
+          saved_charts: result.saved_charts,
         }
       };
       
@@ -1275,6 +1286,9 @@ export default function ChatBot({ workspaceId, autoSessionId, onBackToWorkspaces
                           sessionId={sessionId || undefined}
                           tableId={message.sqlResult.table_id}
                           onSaveToAnalytics={handleSaveQuery}
+                          messageId={message.id}
+                          visualizationRecommendations={message.sqlResult.visualization_recommendations}
+                          savedCharts={message.sqlResult.saved_charts}
                         />
                       </div>
                     )}
@@ -1307,6 +1321,9 @@ export default function ChatBot({ workspaceId, autoSessionId, onBackToWorkspaces
                               sessionId={sessionId || undefined}
                               tableId={table.table_id}
                               onSaveToAnalytics={handleSaveQuery}
+                              messageId={message.id}
+                              visualizationRecommendations={undefined}
+                              savedCharts={undefined}
                             />
                           </div>
                         ))}

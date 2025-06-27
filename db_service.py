@@ -550,6 +550,69 @@ class MessageService:
         return Message(**message)
     
     @staticmethod
+    async def add_chart_to_message(message_id: str, user_id: str, chart: Any) -> bool:
+        """Add a chart to a message's saved charts"""
+        try:
+            
+            # Get the message first to verify ownership
+            message = messages_collection.find_one({"_id": message_id})
+            if not message:
+                return False
+                
+            # Check if the message belongs to a session owned by the user
+            session = sessions_collection.find_one({
+                "_id": message["session_id"],
+                "user_id": user_id
+            })
+            if not session:
+                return False
+            
+            # Convert chart to dict
+            chart_dict = chart.model_dump() if hasattr(chart, 'model_dump') else chart
+            
+            # Update the message to add the chart
+            result = messages_collection.update_one(
+                {"_id": message_id},
+                {"$push": {"query_result.saved_charts": chart_dict}}
+            )
+            
+            return result.modified_count > 0
+            
+        except Exception as e:
+            print(f"Error adding chart to message: {e}")
+            return False
+    
+    @staticmethod
+    async def remove_chart_from_message(message_id: str, user_id: str, chart_id: str) -> bool:
+        """Remove a chart from a message's saved charts"""
+        try:
+            
+            # Get the message first to verify ownership
+            message = messages_collection.find_one({"_id": message_id})
+            if not message:
+                return False
+                
+            # Check if the message belongs to a session owned by the user
+            session = sessions_collection.find_one({
+                "_id": message["session_id"],
+                "user_id": user_id
+            })
+            if not session:
+                return False
+            
+            # Remove the chart from saved charts
+            result = messages_collection.update_one(
+                {"_id": message_id},
+                {"$pull": {"query_result.saved_charts": {"chart_id": chart_id}}}
+            )
+            
+            return result.modified_count > 0
+            
+        except Exception as e:
+            print(f"Error removing chart from message: {e}")
+            return False
+    
+    @staticmethod
     async def get_session_context(session_id: str, user_id: str, query: str, k: int = 5) -> List[Dict[str, Any]]:
         """Get relevant context for a session"""
         # Check if the session exists and belongs to the user

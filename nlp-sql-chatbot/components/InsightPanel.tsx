@@ -269,6 +269,7 @@ const InsightPanel: React.FC<InsightPanelProps> = ({ data, tableName, query, isL
             <div className="h-24 bg-gray-700 rounded"></div>
             <div className="h-24 bg-gray-700 rounded"></div>
           </div>
+
         </div>
       </div>
     );

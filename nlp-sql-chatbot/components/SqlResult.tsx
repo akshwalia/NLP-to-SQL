@@ -41,6 +41,9 @@ interface SqlResultProps {
   onSaveToAnalytics?: (query: any) => void;
   databaseType?: string;
   tableSchema?: any;
+  messageId?: string; // Add message ID for chart saving
+  visualizationRecommendations?: any; // Add LLM recommendations
+  savedCharts?: any[]; // Add saved charts
 }
 
 export default function SqlResult({ 
@@ -55,7 +58,10 @@ export default function SqlResult({
   tableId,
   onSaveToAnalytics,
   databaseType,
-  tableSchema
+  tableSchema,
+  messageId,
+  visualizationRecommendations,
+  savedCharts
 }: SqlResultProps) {
   const [copied, setCopied] = useState(false);
   const [showVisualization, setShowVisualization] = useState(false);
@@ -248,13 +254,16 @@ export default function SqlResult({
             <Copy className="h-3 w-3" />
             <span>JSON</span>
           </button>
-          <button
-            onClick={() => setShowVisualization(true)}
-            className="flex items-center space-x-1 text-xs text-blue-400 hover:text-blue-300 bg-blue-500/20 hover:bg-blue-500/30 px-3 py-1 rounded-lg transition-all duration-200"
-          >
-            <BarChart className="h-3 w-3" />
-            <span>Visualize</span>
-          </button>
+          {/* Only show Visualize button if data is visualizable */}
+          {(!visualizationRecommendations || visualizationRecommendations.is_visualizable !== false) && (
+            <button
+              onClick={() => setShowVisualization(true)}
+              className="flex items-center space-x-1 text-xs text-blue-400 hover:text-blue-300 bg-blue-500/20 hover:bg-blue-500/30 px-3 py-1 rounded-lg transition-all duration-200"
+            >
+              <BarChart className="h-3 w-3" />
+              <span>Visualize</span>
+            </button>
+          )}
           <button
             onClick={() => setShowInsights(!showInsights)}
             className={`flex items-center space-x-1 text-xs ${
@@ -447,6 +456,9 @@ export default function SqlResult({
           onClose={() => setShowVisualization(false)}
           databaseType={databaseType}
           tableSchema={tableSchema}
+          messageId={messageId}
+          visualizationRecommendations={visualizationRecommendations}
+          savedCharts={savedCharts}
         />
       )}
     </div>

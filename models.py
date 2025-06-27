@@ -139,6 +139,38 @@ class WorkspaceInDB(Workspace):
     pass
 
 
+# Chart recommendation models (defined before QueryResult)
+class ChartRecommendation(BaseModel):
+    chart_type: str  # 'bar', 'line', 'pie', etc.
+    title: str
+    description: str
+    x_axis: str
+    y_axis: str
+    secondary_y_axis: Optional[str] = None
+    chart_config: Optional[Dict[str, Any]] = None  # Additional chart configuration
+    confidence_score: float = 0.0  # LLM confidence in this recommendation
+
+
+class VisualizationRecommendations(BaseModel):
+    is_visualizable: bool
+    reason: Optional[str] = None  # Reason why not visualizable, if applicable
+    recommended_charts: List[ChartRecommendation] = []
+    database_type: Optional[str] = None
+    data_characteristics: Optional[Dict[str, Any]] = None
+
+
+class SavedChart(BaseModel):
+    chart_id: str = Field(default_factory=lambda: str(ObjectId()))
+    chart_type: str
+    title: str
+    x_axis: str
+    y_axis: str
+    secondary_y_axis: Optional[str] = None
+    chart_config: Optional[Dict[str, Any]] = None
+    created_by: str = "user"  # "user" or "llm"
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
 # Session models
 class SessionCreate(BaseModel):
     name: str
@@ -183,6 +215,9 @@ class QueryResult(BaseModel):
     fix_attempts: Optional[int] = None
     pagination: Optional[Dict[str, Any]] = None
     tables: Optional[List[Dict[str, Any]]] = None
+    # Add chart recommendations
+    visualization_recommendations: Optional[VisualizationRecommendations] = None
+    saved_charts: List[SavedChart] = Field(default_factory=list)
     
     @field_validator('results', 'pagination', 'tables', mode='before')
     @classmethod
@@ -333,3 +368,6 @@ class SavedQuery(BaseModel):
 
 class SavedQueryInDB(SavedQuery):
     pass
+
+
+# These classes are now defined earlier in the file

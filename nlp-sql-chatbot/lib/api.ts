@@ -543,4 +543,35 @@ export const deleteAllSavedQueries = async (workspaceId?: string): Promise<void>
     console.error('Error deleting all saved queries:', error);
     throw error;
   }
+};
+
+// Chart management APIs
+export const saveChartToMessage = async (messageId: string, chartData: any) => {
+  try {
+    const response = await axios.post(`/messages/${messageId}/charts`, chartData);
+    return response.data;
+  } catch (error) {
+    console.error('Error saving chart to message:', error);
+    throw error;
+  }
+};
+
+export const deleteChartFromMessage = async (messageId: string, chartId: string) => {
+  try {
+    const response = await axios.delete(`/messages/${messageId}/charts/${chartId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting chart from message:', error);
+    throw error;
+  }
+};
+
+export const getMessageCharts = async (messageId: string) => {
+  try {
+    const response = await axios.get(`/messages/${messageId}/charts`);
+    return response.data;
+  } catch (error) {
+    console.error('Error getting message charts:', error);
+    throw error;
+  }
 }; 

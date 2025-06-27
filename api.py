@@ -28,7 +28,7 @@ from models import (
     SessionCreate, Session,
     MessageCreate, Message, QueryResult,
     EditQueryRequest, EditQueryResponse, ExecuteEditRequest, ExecuteSQLRequest,
-    SavedQueryCreate, SavedQuery
+    SavedQueryCreate, SavedQuery, SavedChart
 )
 from auth import (
     authenticate_user, create_access_token,
@@ -901,7 +901,9 @@ async def query_with_session(
             auto_fixed=converted_result.get("auto_fixed"),
             fix_attempts=converted_result.get("fix_attempts"),
             pagination=converted_result.get("pagination"),
-            tables=converted_result.get("tables")
+            tables=converted_result.get("tables"),
+            visualization_recommendations=converted_result.get("visualization_recommendations"),
+            saved_charts=converted_result.get("saved_charts", [])
         )
         
         # Create the assistant message with complete query result
@@ -994,6 +996,14 @@ def format_query_result(result: Dict[str, Any]) -> Dict[str, Any]:
     response["query_type"] = "sql"
     response["sql"] = result.get("sql", "")
     response["results"] = result.get("results", [])
+    
+    # Include visualization recommendations if available
+    if "visualization_recommendations" in result:
+        response["visualization_recommendations"] = result["visualization_recommendations"]
+    
+    # Include saved charts if available
+    if "saved_charts" in result:
+        response["saved_charts"] = result["saved_charts"]
     
     # Include error message if query failed
     if not response["success"]:
@@ -1440,6 +1450,124 @@ async def delete_all_saved_queries(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to delete saved queries: {str(e)}"
+        )
+
+
+# Chart management endpoints
+@app.post("/messages/{message_id}/charts")
+async def save_chart_to_message(
+    message_id: str,
+    chart_data: Dict[str, Any],
+    current_user: User = Depends(get_current_active_user)
+):
+    """Save a chart to a message"""
+    try:
+        # Get the message first to verify ownership
+        message = await MessageService.get_message(message_id, current_user.id)
+        print(message)
+        if not message:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Message not found"
+            )
+        
+        # Create chart object
+        chart = SavedChart(
+            chart_type=chart_data.get("chart_type"),
+            title=chart_data.get("title"),
+            x_axis=chart_data.get("x_axis"),
+            y_axis=chart_data.get("y_axis"),
+            secondary_y_axis=chart_data.get("secondary_y_axis"),
+            chart_config=chart_data.get("chart_config"),
+            created_by="user"
+        )
+        
+        # Add chart to message
+        await MessageService.add_chart_to_message(message_id, current_user.id, chart)
+        
+        return {"success": True, "chart": chart}
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to save chart: {str(e)}"
+        )
+
+
+@app.delete("/messages/{message_id}/charts/{chart_id}")
+async def delete_chart_from_message(
+    message_id: str,
+    chart_id: str,
+    current_user: User = Depends(get_current_active_user)
+):
+    """Delete a chart from a message"""
+    try:
+        # Get the message first to verify ownership
+        message = await MessageService.get_message(message_id, current_user.id)
+        if not message:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Message not found"
+            )
+        
+        # Remove chart from message
+        success = await MessageService.remove_chart_from_message(message_id, current_user.id, chart_id)
+        
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Chart not found"
+            )
+        
+        return {"success": True}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete chart: {str(e)}"
+        )
+
+
+@app.get("/messages/{message_id}/charts")
+async def get_message_charts(
+    message_id: str,
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get all charts for a message"""
+    try:
+        # Get the message first to verify ownership
+        message = await MessageService.get_message(message_id, current_user.id)
+        if not message:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Message not found"
+            )
+        
+        # Return charts from query result
+        charts = []
+        if message.query_result and message.query_result.saved_charts:
+            charts = message.query_result.saved_charts
+        
+        # Also include visualization recommendations
+        recommendations = None
+        if message.query_result and message.query_result.visualization_recommendations:
+            recommendations = message.query_result.visualization_recommendations
+        
+        return {
+            "success": True,
+            "message_id": message_id,
+            "saved_charts": charts,
+            "recommendations": recommendations
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get charts: {str(e)}"
         )
 
 
