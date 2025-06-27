@@ -122,6 +122,8 @@ export default function ChatBot({ workspaceId, autoSessionId, onBackToWorkspaces
   const inputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const isPaginatingRef = useRef(false);
+  const scrollPositionRef = useRef<number>(0);
 
   // Check for speech recognition support
   useEffect(() => {
@@ -203,7 +205,17 @@ export default function ChatBot({ workspaceId, autoSessionId, onBackToWorkspaces
   }, [messages, visibleMessages]);
 
   useEffect(() => {
-    scrollToBottom();
+    // Only auto-scroll when not paginating and if messages array actually grew (new message added)
+    if (!isPaginatingRef.current) {
+      scrollToBottom();
+    } else {
+      // If paginating, restore the previous scroll position after DOM updates
+      requestAnimationFrame(() => {
+        if (messagesContainerRef.current && scrollPositionRef.current !== undefined) {
+          messagesContainerRef.current.scrollTop = scrollPositionRef.current;
+        }
+      });
+    }
   }, [messages]);
   
   useEffect(() => {
@@ -255,7 +267,9 @@ export default function ChatBot({ workspaceId, autoSessionId, onBackToWorkspaces
   };
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // Use instant scroll if we're paginating to avoid conflicts
+    const behavior = isPaginatingRef.current ? 'auto' : 'smooth';
+    messagesEndRef.current?.scrollIntoView({ behavior });
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -331,7 +345,7 @@ export default function ChatBot({ workspaceId, autoSessionId, onBackToWorkspaces
           data: result.data,
           error: result.error,
           pagination: result.pagination,
-          table_id: result.table_id,
+          table_id: result.table_id || result.pagination?.table_id,
         };
         
         // Add verification result if available (only for new messages, not loaded ones)
@@ -434,7 +448,14 @@ export default function ChatBot({ workspaceId, autoSessionId, onBackToWorkspaces
     }
     
     console.log(`Fetching page ${newPage} for table ${tableId} in session ${sessionId}`);
+    
+    // Capture current scroll position before pagination
+    if (messagesContainerRef.current) {
+      scrollPositionRef.current = messagesContainerRef.current.scrollTop;
+    }
+    
     setIsProcessing(true);
+    isPaginatingRef.current = true;
     
     try {
       const result = await getPaginatedResults(sessionId, tableId, newPage);
@@ -451,7 +472,7 @@ export default function ChatBot({ workspaceId, autoSessionId, onBackToWorkspaces
               ...msg,
               sqlResult: {
                 ...msg.sqlResult,
-                data: result.data,
+                data: result.results || result.data, // Use results field from pagination response
                 pagination: result.pagination,
                 table_id: currentTableId
               }
@@ -462,7 +483,7 @@ export default function ChatBot({ workspaceId, autoSessionId, onBackToWorkspaces
               if (table.table_id === tableId) {
                 return {
                   ...table,
-                  results: result.data,
+                  results: result.results || result.data, // Use results field from pagination response
                   pagination: result.pagination,
                   table_id: currentTableId
                 };
@@ -500,6 +521,14 @@ export default function ChatBot({ workspaceId, autoSessionId, onBackToWorkspaces
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsProcessing(false);
+      
+      // Restore scroll position after a short delay to ensure DOM is updated
+      setTimeout(() => {
+        if (messagesContainerRef.current && scrollPositionRef.current !== undefined) {
+          messagesContainerRef.current.scrollTop = scrollPositionRef.current;
+        }
+        isPaginatingRef.current = false;
+      }, 50);
     }
   };
 
