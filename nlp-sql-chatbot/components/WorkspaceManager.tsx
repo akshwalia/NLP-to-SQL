@@ -3,6 +3,7 @@ import { Plus, Database, MoreVertical, Edit, Trash2, Loader2, Play, RefreshCw, M
 import { getAllWorkspaces, createWorkspaceWithDetails, updateWorkspace, deleteWorkspace, activateWorkspace, WorkspaceRequest, listWorkspaceSessions } from '../lib/api';
 import WorkspaceForm from './WorkspaceForm';
 import SessionsList from './SessionsList';
+import ThemeToggle from './ThemeToggle';
 
 interface Workspace {
   _id: string;
@@ -136,13 +137,18 @@ export default function WorkspaceManager({ onWorkspaceConnect }: WorkspaceManage
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-            Welcome to NLP to SQL Assistant
-          </h1>
-          <p className="text-xl text-gray-800 dark:text-gray-300 max-w-3xl mx-auto">
-            Connect to your databases and start querying with natural language
-          </p>
+        <div className="flex justify-between items-start mb-12">
+          <div className="text-center flex-1">
+            <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+              Welcome to NLP to SQL Assistant
+            </h1>
+            <p className="text-xl text-gray-800 dark:text-gray-300 max-w-3xl mx-auto">
+              Connect to your databases and start querying with natural language
+            </p>
+          </div>
+          <div className="flex-shrink-0 ml-4">
+            <ThemeToggle size="md" />
+          </div>
         </div>
 
         {workspaces.length === 0 ? (
