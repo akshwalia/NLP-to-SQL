@@ -4,11 +4,11 @@ import os
 import re
 from typing import Dict, List, Optional, Tuple, Any
 
-import google.generativeai as genai
+import openai
 from dotenv import load_dotenv
 from fuzzywuzzy import fuzz
 from langchain.chains import LLMChain
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import AzureChatOpenAI
 from langchain.prompts import PromptTemplate
 
 from database import Database
@@ -49,13 +49,20 @@ class ConsistentAIEngine:
         # Initialize templates
         self._initialize_templates()
         
-        # Initialize Google Gemini and LangChain
-        self.api_key = os.getenv("GOOGLE_API_KEY")
-        if not self.api_key:
-            raise ValueError("GOOGLE_API_KEY environment variable not set")
+        # Initialize Azure OpenAI and LangChain
+        self.azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+        self.api_key = os.getenv("AZURE_OPENAI_API_KEY")
+        self.api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-15-preview")
+        self.deployment_name = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-4")
         
-        # Configure Gemini
-        genai.configure(api_key=self.api_key)
+        if not self.azure_endpoint or not self.api_key:
+            raise ValueError("AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_API_KEY environment variables must be set")
+        
+        # Configure Azure OpenAI
+        openai.api_type = "azure"
+        openai.api_base = self.azure_endpoint
+        openai.api_version = self.api_version
+        openai.api_key = self.api_key
         
         # Define SQL generation prompt
         self.sql_prompt = PromptTemplate(
@@ -80,13 +87,15 @@ Follow these guidelines:
 """
         )
         
-        # Initialize LangChain with Gemini
+        # Initialize LangChain with Azure OpenAI
         # Note: Langfuse 3.x doesn't support LangChain callbacks
         # Use @observe decorators on methods instead
-        self.llm = ChatGoogleGenerativeAI(
-            model="gemini-2.0-flash", 
-            temperature=0,
-            google_api_key=self.api_key
+        self.llm = AzureChatOpenAI(
+            azure_endpoint=self.azure_endpoint,
+            azure_deployment=self.deployment_name,
+            api_version=self.api_version,
+            api_key=self.api_key,
+            temperature=0
         )
         
         self.sql_chain = LLMChain(llm=self.llm, prompt=self.sql_prompt)
