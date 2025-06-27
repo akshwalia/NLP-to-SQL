@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Plus, Database, MoreVertical, Edit, Trash2, Loader2, Play, RefreshCw, MessageSquare, History } from 'lucide-react';
-import { getAllWorkspaces, createWorkspaceWithDetails, updateWorkspace, deleteWorkspace, activateWorkspace, WorkspaceRequest, listWorkspaceSessions } from '../lib/api';
+import { getAllWorkspaces, createWorkspaceWithDetails, updateWorkspace, deleteWorkspace, activateWorkspace, WorkspaceRequest, listWorkspaceSessions, createSession } from '../lib/api';
 import WorkspaceForm from './WorkspaceForm';
 import SessionsList from './SessionsList';
 import ThemeToggle from './ThemeToggle';
@@ -99,7 +99,20 @@ export default function WorkspaceManager({ onWorkspaceConnect }: WorkspaceManage
           const mostRecentSession = sortedSessions[0];
           onWorkspaceConnect(workspaceId, mostRecentSession._id);
         } else {
-          onWorkspaceConnect(workspaceId);
+          // No sessions exist, create a new one automatically
+          try {
+            const newSession = await createSession({
+              workspace_id: workspaceId,
+              name: `Chat Session ${new Date().toLocaleString()}`,
+              description: 'Auto-created session for new workspace connection'
+            });
+            console.log('Auto-created new session:', newSession._id);
+            onWorkspaceConnect(workspaceId, newSession._id);
+          } catch (createSessionError) {
+            console.error('Error creating auto session:', createSessionError);
+            // Fall back to connecting without a session
+            onWorkspaceConnect(workspaceId);
+          }
         }
       } catch (sessionError) {
         console.warn('Could not fetch sessions, connecting without auto-loading:', sessionError);
