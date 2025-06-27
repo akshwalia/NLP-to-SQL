@@ -177,38 +177,38 @@ export default function SqlResult({
 
   if (!data || !data.length) {
     return (
-      <div className="border border-amber-500/20 rounded-2xl p-6 bg-amber-500/10 shadow-lg animate-in slide-in-from-bottom-2 duration-500">
+      <div className="border border-amber-400 dark:border-amber-500/20 rounded-2xl p-6 bg-amber-50 dark:bg-amber-500/10 shadow-lg animate-in slide-in-from-bottom-2 duration-500 transition-colors duration-300">
         <div className="flex items-center space-x-3 mb-4">
-          <div className="p-2 bg-amber-500/20 rounded-xl">
-            <CheckCircle className="h-5 w-5 text-amber-400" />
+          <div className="p-2 bg-amber-100 dark:bg-amber-500/20 rounded-xl">
+            <CheckCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
           </div>
-          <h3 className="text-lg font-bold text-amber-400">{title || "Query Executed"}</h3>
+          <h3 className="text-lg font-bold text-amber-800 dark:text-amber-400">{title || "Query Executed"}</h3>
         </div>
         
         {description && (
-          <p className="text-sm text-amber-300 mb-4">{description}</p>
+          <p className="text-sm text-amber-700 dark:text-amber-300 mb-4">{description}</p>
         )}
         
-        <p className="text-sm text-amber-300 mb-4 bg-amber-500/20 p-3 rounded-xl">
+        <p className="text-sm text-amber-700 dark:text-amber-300 mb-4 bg-amber-100 dark:bg-amber-500/20 p-3 rounded-xl">
           The query executed successfully but returned no data.
         </p>
         
-        <div className="pt-4 border-t border-amber-500/20">
+        <div className="pt-4 border-t border-amber-200 dark:border-amber-500/20">
           <div className="flex items-center justify-between mb-2">
-            <h4 className="text-sm font-semibold text-amber-400 flex items-center space-x-2">
+            <h4 className="text-sm font-semibold text-amber-800 dark:text-amber-400 flex items-center space-x-2">
               <Database className="h-4 w-4" />
               <span>SQL Query</span>
             </h4>
             <button
               onClick={() => copyToClipboard(sql)}
-              className="flex items-center space-x-1 text-xs text-amber-400 hover:text-amber-300 bg-amber-500/20 hover:bg-amber-500/30 px-3 py-1 rounded-lg transition-all duration-200"
+              className="flex items-center space-x-1 text-xs text-amber-700 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 bg-amber-100 dark:bg-amber-500/20 hover:bg-amber-200 dark:hover:bg-amber-500/30 px-3 py-1 rounded-lg transition-all duration-200"
             >
               <Copy className="h-3 w-3" />
               <span>{copied ? 'Copied!' : 'Copy'}</span>
             </button>
           </div>
-          <div className="bg-amber-500/20 rounded-xl p-3 overflow-x-auto">
-            <pre className="text-sm text-amber-300 font-mono">{sql}</pre>
+          <div className="bg-amber-100 dark:bg-amber-500/20 rounded-xl p-3 overflow-x-auto">
+            <pre className="text-sm text-amber-800 dark:text-amber-300 font-mono">{sql}</pre>
           </div>
         </div>
       </div>
@@ -219,23 +219,23 @@ export default function SqlResult({
   const headers = data[0] ? Object.keys(data[0]) : [];
 
   return (
-    <div className="border border-emerald-500/20 rounded-2xl p-6 bg-emerald-500/10 shadow-lg animate-in slide-in-from-bottom-2 duration-500">
+    <div className="border border-emerald-400 dark:border-emerald-500/20 rounded-2xl p-6 bg-emerald-50 dark:bg-emerald-500/10 shadow-lg animate-in slide-in-from-bottom-2 duration-500 transition-colors duration-300">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-3">
-          <div className="p-2 bg-emerald-500/20 rounded-xl">
-            <CheckCircle className="h-5 w-5 text-emerald-400" />
+          <div className="p-2 bg-emerald-100 dark:bg-emerald-500/20 rounded-xl">
+            <CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
           </div>
-          <h3 className="text-lg font-bold text-emerald-400">{title || "Query Results"}</h3>
+          <h3 className="text-lg font-bold text-emerald-800 dark:text-emerald-400">{title || "Query Results"}</h3>
         </div>
         
         <div className="flex items-center space-x-2">
-          <span className="text-xs bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full font-semibold">
+          <span className="text-xs bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-400 px-3 py-1 rounded-full font-semibold">
             {pagination ? `${data?.length || 0} of ${pagination.total_rows}` : `${data?.length || 0}`} {data?.length === 1 ? 'row' : 'rows'}
           </span>
           <div className="relative group">
             <button
               onClick={exportToCSV}
-              className="flex items-center space-x-1 text-xs text-emerald-400 hover:text-emerald-300 bg-emerald-500/20 hover:bg-emerald-500/30 px-3 py-1 rounded-lg transition-all duration-200"
+              className="flex items-center space-x-1 text-xs text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 bg-emerald-100 dark:bg-emerald-500/20 hover:bg-emerald-200 dark:hover:bg-emerald-500/30 px-3 py-1 rounded-lg transition-all duration-200"
             >
               <Download className="h-3 w-3" />
               <span>CSV</span>
@@ -243,7 +243,7 @@ export default function SqlResult({
           </div>
           <button
             onClick={() => copyToClipboard(JSON.stringify(data, null, 2))}
-            className="flex items-center space-x-1 text-xs text-emerald-400 hover:text-emerald-300 bg-emerald-500/20 hover:bg-emerald-500/30 px-3 py-1 rounded-lg transition-all duration-200"
+            className="flex items-center space-x-1 text-xs text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 bg-emerald-100 dark:bg-emerald-500/20 hover:bg-emerald-200 dark:hover:bg-emerald-500/30 px-3 py-1 rounded-lg transition-all duration-200"
           >
             <Copy className="h-3 w-3" />
             <span>JSON</span>
@@ -282,17 +282,17 @@ export default function SqlResult({
       </div>
       
       {description && (
-        <p className="text-sm text-emerald-300 mb-4">{description}</p>
+        <p className="text-sm text-emerald-700 dark:text-emerald-300 mb-4">{description}</p>
       )}
       
       {/* Data Table */}
-      <div className="bg-gray-800/50 rounded-xl overflow-hidden mb-6">
+      <div className="bg-gray-100 dark:bg-gray-800/50 rounded-xl overflow-hidden mb-6 transition-colors duration-300">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-700/50">
+            <thead className="bg-gray-200 dark:bg-gray-700/50">
               <tr>
                 {headers.map((header, index) => (
-                  <th key={index} className="px-4 py-3 text-left font-semibold text-gray-300 border-b border-gray-600">
+                  <th key={index} className="px-4 py-3 text-left font-semibold text-gray-900 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">
                     {header}
                   </th>
                 ))}
@@ -300,9 +300,9 @@ export default function SqlResult({
             </thead>
             <tbody>
               {data.map((row, rowIndex) => (
-                <tr key={rowIndex} className="hover:bg-gray-700/30 transition-colors">
+                <tr key={rowIndex} className="hover:bg-gray-200 dark:hover:bg-gray-700/30 transition-colors">
                   {headers.map((header, colIndex) => (
-                    <td key={colIndex} className="px-4 py-3 text-gray-300 border-b border-gray-700/50">
+                    <td key={colIndex} className="px-4 py-3 text-gray-900 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700/50">
                       {typeof row[header] === 'object' && row[header] !== null 
                         ? JSON.stringify(row[header]) 
                         : formatNumber(row[header])}
@@ -317,12 +317,12 @@ export default function SqlResult({
       
       {/* Pagination */}
       {pagination && pagination.total_pages > 1 && (
-        <div className="flex items-center justify-between py-4 border-t border-emerald-500/20">
+        <div className="flex items-center justify-between py-4 border-t border-emerald-200 dark:border-emerald-500/20">
           <div className="flex items-center space-x-3">
-            <span className="text-sm text-gray-400">
+            <span className="text-sm text-gray-700 dark:text-gray-400">
               Page {pagination.current_page} of {pagination.total_pages}
             </span>
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-gray-600 dark:text-gray-500">
               ({pagination.total_rows} total rows)
             </span>
           </div>
@@ -330,7 +330,7 @@ export default function SqlResult({
             <button
               onClick={() => handlePageChange(pagination.current_page - 1)}
               disabled={pagination.current_page <= 1 || !onPageChange}
-              className="flex items-center space-x-1 px-3 py-2 text-sm text-gray-400 hover:text-white bg-gray-700 hover:bg-gray-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="flex items-center space-x-1 px-3 py-2 text-sm text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <ChevronLeft className="h-4 w-4" />
               <span>Previous</span>
@@ -347,7 +347,7 @@ export default function SqlResult({
                   className={`px-3 py-2 text-sm rounded-lg transition-colors ${
                     pageNum === pagination.current_page
                       ? 'bg-emerald-500 text-white'
-                      : 'text-gray-400 hover:text-white bg-gray-700 hover:bg-gray-600'
+                      : 'text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600'
                   }`}
                 >
                   {pageNum}
@@ -361,11 +361,11 @@ export default function SqlResult({
                     <button
                       onClick={() => handlePageChange(1)}
                       disabled={!onPageChange}
-                      className="px-3 py-2 text-sm text-gray-400 hover:text-white bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+                      className="px-3 py-2 text-sm text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg transition-colors"
                     >
                       1
                     </button>
-                    {pagination.current_page > 4 && <span className="text-gray-500">...</span>}
+                    {pagination.current_page > 4 && <span className="text-gray-600 dark:text-gray-500">...</span>}
                   </>
                 )}
                 
@@ -379,7 +379,7 @@ export default function SqlResult({
                       className={`px-3 py-2 text-sm rounded-lg transition-colors ${
                         pageNum === pagination.current_page
                           ? 'bg-emerald-500 text-white'
-                          : 'text-gray-400 hover:text-white bg-gray-700 hover:bg-gray-600'
+                          : 'text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600'
                       }`}
                     >
                       {pageNum}
@@ -388,11 +388,11 @@ export default function SqlResult({
                 
                 {pagination.current_page < pagination.total_pages - 2 && (
                   <>
-                    {pagination.current_page < pagination.total_pages - 3 && <span className="text-gray-500">...</span>}
+                    {pagination.current_page < pagination.total_pages - 3 && <span className="text-gray-600 dark:text-gray-500">...</span>}
                     <button
                       onClick={() => handlePageChange(pagination.total_pages)}
                       disabled={!onPageChange}
-                      className="px-3 py-2 text-sm text-gray-400 hover:text-white bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+                      className="px-3 py-2 text-sm text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg transition-colors"
                     >
                       {pagination.total_pages}
                     </button>
@@ -404,7 +404,7 @@ export default function SqlResult({
             <button
               onClick={() => handlePageChange(pagination.current_page + 1)}
               disabled={pagination.current_page >= pagination.total_pages || !onPageChange}
-              className="flex items-center space-x-1 px-3 py-2 text-sm text-gray-400 hover:text-white bg-gray-700 hover:bg-gray-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="flex items-center space-x-1 px-3 py-2 text-sm text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <span>Next</span>
               <ChevronRight className="h-4 w-4" />
@@ -421,22 +421,22 @@ export default function SqlResult({
       )}
       
       {/* SQL Query Display */}
-      <div className="pt-6 border-t border-emerald-500/20">
+      <div className="pt-6 border-t border-emerald-200 dark:border-emerald-500/20">
         <div className="flex items-center justify-between mb-2">
-          <h4 className="text-sm font-semibold text-emerald-400 flex items-center space-x-2">
+          <h4 className="text-sm font-semibold text-emerald-800 dark:text-emerald-400 flex items-center space-x-2">
             <Database className="h-4 w-4" />
             <span>SQL Query</span>
           </h4>
           <button
             onClick={() => copyToClipboard(sql)}
-            className="flex items-center space-x-1 text-xs text-emerald-400 hover:text-emerald-300 bg-emerald-500/20 hover:bg-emerald-500/30 px-3 py-1 rounded-lg transition-all duration-200"
+            className="flex items-center space-x-1 text-xs text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 bg-emerald-100 dark:bg-emerald-500/20 hover:bg-emerald-200 dark:hover:bg-emerald-500/30 px-3 py-1 rounded-lg transition-all duration-200"
           >
             <Copy className="h-3 w-3" />
             <span>{copied ? 'Copied!' : 'Copy'}</span>
           </button>
         </div>
-        <div className="bg-gray-800/50 rounded-xl p-3 overflow-x-auto">
-          <pre className="text-sm text-gray-300 font-mono">{sql}</pre>
+        <div className="bg-gray-100 dark:bg-gray-800/50 rounded-xl p-3 overflow-x-auto">
+          <pre className="text-sm text-gray-800 dark:text-gray-300 font-mono">{sql}</pre>
         </div>
       </div>
       

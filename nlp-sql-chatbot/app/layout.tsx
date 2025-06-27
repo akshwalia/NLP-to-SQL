@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "../lib/authContext";
+import { ThemeProvider } from "../lib/themeContext";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -25,8 +26,10 @@ export default function RootLayout({
         <meta name="theme-color" content="#6366F1" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       </head>
-      <body className={`${inter.className} h-full bg-gradient-to-br from-slate-50 to-blue-50 antialiased`}>
-        <AuthProvider>{children}</AuthProvider>
+      <body className={`${inter.className} h-full bg-gradient-to-br from-slate-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 antialiased transition-colors duration-300`}>
+        <ThemeProvider>
+          <AuthProvider>{children}</AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
