@@ -2,6 +2,8 @@
 
 import React from 'react';
 import { ArrowRight, Database, Brain, BarChart3, MessageSquare, TrendingUp, Sparkles, Zap } from 'lucide-react';
+import { useTheme } from '../lib/themeContext';
+import ThemeToggle from './ThemeToggle';
 
 interface LandingPageProps {
   onLoginClick: () => void;
@@ -54,8 +56,10 @@ const features = [
 ];
 
 export default function LandingPage({ onLoginClick, onRegisterClick }: LandingPageProps) {
+  const { theme } = useTheme();
+  
   return (
-    <div className="min-h-screen bg-gray-900 text-white overflow-hidden relative">
+    <div className="min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-white overflow-hidden relative transition-colors duration-300">
       {/* Animated Background Bubbles */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="bubble bubble-1"></div>
@@ -69,7 +73,7 @@ export default function LandingPage({ onLoginClick, onRegisterClick }: LandingPa
       </div>
 
       {/* Navigation */}
-      <nav className="bg-gray-800/30 backdrop-blur-md border-b border-gray-700/50 sticky top-0 z-50 animate-slide-down">
+      <nav className="bg-white/30 dark:bg-gray-800/30 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-700/50 sticky top-0 z-50 animate-slide-down transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-3">
@@ -81,15 +85,16 @@ export default function LandingPage({ onLoginClick, onRegisterClick }: LandingPa
               </h1>
             </div>
             <div className="flex items-center space-x-4">
+              <ThemeToggle size="sm" />
               <button
                 onClick={onLoginClick}
-                className="px-4 py-2 text-gray-300 hover:text-white transition-all duration-200 hover:scale-105"
+                className="px-4 py-2 text-gray-800 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-all duration-200 hover:scale-105"
               >
                 Login
               </button>
               <button
                 onClick={onRegisterClick}
-                className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-white"
               >
                 Register
               </button>
@@ -107,10 +112,10 @@ export default function LandingPage({ onLoginClick, onRegisterClick }: LandingPa
                 AnalytIQ.AI
               </span>
             </h1>
-            <p className="text-2xl md:text-3xl font-light text-gray-300 mb-4 animate-fade-in-up-delayed">
+            <p className="text-2xl md:text-3xl font-light text-gray-800 dark:text-gray-300 mb-4 animate-fade-in-up-delayed">
               Intelligent SQL Made Simple
             </p>
-            <p className="text-lg md:text-xl text-gray-400 mb-8 max-w-3xl mx-auto leading-relaxed animate-fade-in-up-delayed">
+            <p className="text-lg md:text-xl text-gray-700 dark:text-gray-400 mb-8 max-w-3xl mx-auto leading-relaxed animate-fade-in-up-delayed">
               Transform natural language into powerful SQL queries with AI-driven analytics and visualization.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-fade-in-up-delayed-2">
@@ -123,7 +128,7 @@ export default function LandingPage({ onLoginClick, onRegisterClick }: LandingPa
               </button>
               <button
                 onClick={onLoginClick}
-                className="px-8 py-4 border-2 border-gray-600 hover:border-gray-500 rounded-xl font-semibold text-lg transition-all duration-300 hover:bg-gray-800/50 hover:scale-105"
+                className="px-8 py-4 border-2 border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 rounded-xl font-semibold text-lg transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-800/50 hover:scale-105"
               >
                 Login
               </button>
@@ -141,7 +146,7 @@ export default function LandingPage({ onLoginClick, onRegisterClick }: LandingPa
                 Core Features
               </span>
             </h2>
-            <p className="text-xl text-gray-300 max-w-3xl mx-auto animate-fade-in-up-delayed">
+            <p className="text-xl text-gray-800 dark:text-gray-300 max-w-3xl mx-auto animate-fade-in-up-delayed">
               Everything you need to unlock the power of your data with intelligent SQL generation
             </p>
           </div>
@@ -150,16 +155,16 @@ export default function LandingPage({ onLoginClick, onRegisterClick }: LandingPa
             {features.map((feature, index) => (
               <div
                 key={index}
-                className="group bg-gray-800/30 backdrop-blur-sm border border-gray-700/50 rounded-2xl p-8 hover:border-gray-600/50 transition-all duration-500 hover:transform hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/10 animate-slide-up hover:bg-gray-800/50"
+                className="group bg-white/30 dark:bg-gray-800/30 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 rounded-2xl p-8 hover:border-gray-300/50 dark:hover:border-gray-600/50 transition-all duration-500 hover:transform hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/10 animate-slide-up hover:bg-gray-50/50 dark:hover:bg-gray-800/50"
                 style={{ animationDelay: feature.delay }}
               >
                 <div className={`inline-flex p-4 rounded-2xl bg-gradient-to-r ${feature.gradient} mb-6 shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110`}>
                   <feature.icon className="h-8 w-8 text-white" />
                 </div>
-                <h3 className="text-xl font-bold mb-4 text-white group-hover:text-blue-400 transition-colors duration-300">
+                <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white group-hover:text-blue-400 transition-colors duration-300">
                   {feature.title}
                 </h3>
-                <p className="text-gray-300 leading-relaxed group-hover:text-gray-200 transition-colors duration-300">
+                <p className="text-gray-800 dark:text-gray-300 leading-relaxed group-hover:text-gray-900 dark:group-hover:text-gray-200 transition-colors duration-300">
                   {feature.description}
                 </p>
               </div>
@@ -191,7 +196,7 @@ export default function LandingPage({ onLoginClick, onRegisterClick }: LandingPa
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-800/30 border-t border-gray-700/50 backdrop-blur-sm">
+      <footer className="bg-white/30 dark:bg-gray-800/30 border-t border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center space-x-3 mb-4 md:mb-0">
@@ -202,9 +207,9 @@ export default function LandingPage({ onLoginClick, onRegisterClick }: LandingPa
                 AnalytIQ.AI
               </span>
             </div>
-            <p className="text-gray-400 text-sm text-center md:text-right">
-              © 2024 AnalytIQ.AI. Intelligent data transformation.
-            </p>
+                          <p className="text-gray-700 dark:text-gray-400 text-sm text-center md:text-right">
+                © 2024 AnalytIQ.AI. Intelligent data transformation.
+              </p>
           </div>
         </div>
       </footer>

@@ -195,10 +195,10 @@ export default function SqlEditor({ sessionId, initialQueries, onResults, classN
   };
 
   return (
-    <div className={`bg-gray-800 rounded-lg border border-gray-600 p-4 ${className}`}>
+    <div className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-600 p-4 transition-colors duration-300 ${className}`}>
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-100 flex items-center gap-2">
-          <Edit3 size={20} className="text-orange-400" />
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+          <Edit3 size={20} className="text-orange-500 dark:text-orange-400" />
           SQL Editor - Review & Execute
         </h3>
         <div className="flex gap-2">
@@ -223,11 +223,11 @@ export default function SqlEditor({ sessionId, initialQueries, onResults, classN
       </div>
 
       {requiresConfirmation && (
-        <div className="mb-4 p-3 bg-amber-900/50 border border-amber-600 rounded-lg">
-          <div className="flex items-center gap-2 text-amber-200">
+        <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/50 border border-amber-400 dark:border-amber-600 rounded-lg transition-colors duration-300">
+          <div className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
             ⚠️ <strong>Confirmation Required</strong>
           </div>
-          <p className="text-sm text-amber-300 mt-1">
+          <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
             This query modifies your database. Please review the SQL carefully before executing.
           </p>
         </div>
@@ -235,9 +235,9 @@ export default function SqlEditor({ sessionId, initialQueries, onResults, classN
 
       <div className="space-y-4">
         {cells.map((cell, index) => (
-          <div key={cell.id} className="border border-gray-600 rounded-lg p-3 bg-gray-700">
+          <div key={cell.id} className="border border-gray-300 dark:border-gray-600 rounded-lg p-3 bg-gray-50 dark:bg-gray-700 transition-colors duration-300">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-300">Cell {index + 1}</span>
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Cell {index + 1}</span>
               <div className="flex gap-1">
                 <button
                   onClick={() => executeCell(cell.id)}
@@ -274,7 +274,7 @@ export default function SqlEditor({ sessionId, initialQueries, onResults, classN
                 className="w-full h-32 p-2 border border-gray-500 rounded font-mono text-sm resize-vertical focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-800 text-gray-100 placeholder-gray-400"
               />
             ) : (
-              <div className="bg-gray-900 text-green-400 p-2 rounded font-mono text-sm min-h-[4rem] whitespace-pre-wrap">
+              <div className="bg-gray-100 dark:bg-gray-900 text-green-600 dark:text-green-400 p-2 rounded font-mono text-sm min-h-[4rem] whitespace-pre-wrap transition-colors duration-300">
                 {cell.sql || 'Empty cell - click edit to add SQL'}
               </div>
             )}
@@ -286,19 +286,19 @@ export default function SqlEditor({ sessionId, initialQueries, onResults, classN
             )}
 
             {cell.error && (
-              <div className="mt-2 p-2 bg-red-900/50 border border-red-600 rounded text-sm text-red-300">
+              <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/50 border border-red-400 dark:border-red-600 rounded text-sm text-red-700 dark:text-red-300 transition-colors duration-300">
                 <strong>Error:</strong> {cell.error}
               </div>
             )}
 
             {cell.result && (
-              <div className="mt-2 p-2 bg-green-900/50 border border-green-600 rounded text-sm text-green-300">
+              <div className="mt-2 p-2 bg-green-50 dark:bg-green-900/50 border border-green-400 dark:border-green-600 rounded text-sm text-green-700 dark:text-green-300 transition-colors duration-300">
                 <strong>Success:</strong> {cell.result.message || 'Query executed successfully'}
                 {cell.result.affected_rows !== undefined && (
                   <span className="ml-2">({cell.result.affected_rows} rows affected)</span>
                 )}
                 {cell.result.transaction_mode && (
-                  <div className="text-xs text-green-400 mt-1">
+                  <div className="text-xs text-green-600 dark:text-green-400 mt-1">
                     ✓ Executed in transaction mode
                   </div>
                 )}
