@@ -230,7 +230,7 @@ class QueryResult(BaseModel):
     @staticmethod
     def _convert_non_serializable_recursive(obj):
         """Recursively convert non-serializable objects"""
-        from datetime import datetime, timedelta
+        from datetime import datetime, date, timedelta
         
         if isinstance(obj, Decimal):
             return float(obj)
@@ -246,6 +246,9 @@ class QueryResult(BaseModel):
             }
         elif isinstance(obj, datetime):
             # Ensure datetime objects are ISO formatted strings
+            return obj.isoformat()
+        elif isinstance(obj, date):
+            # Convert date objects to ISO formatted strings
             return obj.isoformat()
         elif isinstance(obj, dict):
             return {key: QueryResult._convert_non_serializable_recursive(value) for key, value in obj.items()}
@@ -365,7 +368,7 @@ class SavedQuery(BaseModel):
     @staticmethod
     def _convert_non_serializable_recursive(obj):
         """Recursively convert non-serializable objects"""
-        from datetime import datetime, timedelta
+        from datetime import datetime, date, timedelta
         
         if isinstance(obj, Decimal):
             return float(obj)
@@ -381,6 +384,9 @@ class SavedQuery(BaseModel):
             }
         elif isinstance(obj, datetime):
             # Ensure datetime objects are ISO formatted strings
+            return obj.isoformat()
+        elif isinstance(obj, date):
+            # Convert date objects to ISO formatted strings
             return obj.isoformat()
         elif isinstance(obj, dict):
             return {key: SavedQuery._convert_non_serializable_recursive(value) for key, value in obj.items()}
