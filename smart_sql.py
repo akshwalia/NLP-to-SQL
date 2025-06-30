@@ -4,6 +4,8 @@ import hashlib
 import json
 import re
 import uuid
+from datetime import datetime, date
+from decimal import Decimal
 from typing import Dict, List, Optional, Tuple, Any, Union
 
 import openai
@@ -3210,6 +3212,17 @@ Respond with ONLY one of these two words:
         try:
             # Analyze data characteristics
             data_characteristics = self._analyze_data_characteristics(results)
+            print(f"Chart recommendations - data characteristics: {data_characteristics}")
+            
+            # Check if we have visualizable data characteristics
+            has_numerical = len(data_characteristics.get("numerical_columns", [])) > 0
+            has_categorical = len(data_characteristics.get("categorical_columns", [])) > 0
+            has_data = len(data_characteristics.get("all_columns", [])) > 0
+            
+            # If we have no data characteristics but have results, something went wrong - use fallback
+            if not has_data and results:
+                print("Data characteristics analysis failed, using fallback recommendations")
+                return self._create_fallback_recommendations({}, results)
             
             # Prepare prompt for LLM
             chart_recommendation_prompt = self._create_chart_recommendation_prompt()
@@ -3231,6 +3244,7 @@ Respond with ONLY one of these two words:
             
             # Parse the LLM response
             response_text = self._extract_response_content(response)
+            print(f"LLM response for chart recommendations: {response_text[:500]}...")  # Debug log
             
             # Parse JSON response from LLM
             import json
@@ -3241,9 +3255,15 @@ Respond with ONLY one of these two words:
                 import re
                 json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
                 if json_match:
-                    recommendations_data = json.loads(json_match.group())
+                    try:
+                        recommendations_data = json.loads(json_match.group())
+                    except json.JSONDecodeError:
+                        # If JSON parsing still fails, create basic recommendations
+                        print("JSON parsing failed, using fallback recommendations")
+                        recommendations_data = self._create_fallback_recommendations(data_characteristics, results)
                 else:
                     # If parsing fails, create basic recommendations
+                    print("No JSON found in LLM response, using fallback recommendations")
                     recommendations_data = self._create_fallback_recommendations(data_characteristics, results)
             
             # Validate and format recommendations
@@ -3263,11 +3283,22 @@ Respond with ONLY one of these two words:
                     formatted_recommendations["is_visualizable"] = False
                     formatted_recommendations["reason"] = "Unable to determine valid chart axes from data"
             
+            # Double-check: if we marked as not visualizable but have good data, override with fallback
+            if (not formatted_recommendations.get("is_visualizable") and 
+                (has_numerical or has_categorical) and 
+                len(formatted_recommendations.get("recommended_charts", [])) == 0):
+                print("LLM marked as not visualizable but data seems good, using fallback")
+                fallback_recommendations = self._create_fallback_recommendations(data_characteristics, results)
+                if fallback_recommendations.get("is_visualizable"):
+                    return fallback_recommendations
+            
             return formatted_recommendations
             
         except Exception as e:
+            print(f"Error in generate_chart_recommendations: {e}")
             # Return fallback recommendations
-            fallback = self._create_fallback_recommendations(data_characteristics if 'data_characteristics' in locals() else {}, results)
+            data_chars = data_characteristics if 'data_characteristics' in locals() else {}
+            fallback = self._create_fallback_recommendations(data_chars, results)
             return fallback
 
     def _analyze_data_characteristics(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -3283,56 +3314,109 @@ Respond with ONLY one of these two words:
         if not results or len(results) == 0:
             return {}
             
-        characteristics = {
-            "numerical_columns": [],
-            "categorical_columns": [],
-            "date_columns": [],
-            "unique_categories": {},
-            "row_count": len(results),
-            "all_columns": []
-        }
-        
-        # Get all columns from first row
-        first_row = results[0]
-        characteristics["all_columns"] = list(first_row.keys())
-        
-        for column in first_row.keys():
-            # Extract all values for this column
-            values = [row.get(column) for row in results if row.get(column) is not None]
-            if not values:
-                continue
-                
-            sample_value = values[0]
+        try:
+            characteristics = {
+                "numerical_columns": [],
+                "categorical_columns": [],
+                "date_columns": [],
+                "unique_categories": {},
+                "row_count": len(results),
+                "all_columns": []
+            }
             
-            # Check if it's a date column
-            if isinstance(sample_value, (datetime, date)):
-                characteristics["date_columns"].append(column)
-            # Check if it's numerical
-            elif isinstance(sample_value, (int, float, Decimal)) and not isinstance(sample_value, bool):
-                # Additional check: if it looks like an ID field, treat as categorical if reasonable unique values
-                if (column.lower().endswith('id') or 'id' in column.lower()) and len(set(values)) > len(results) * 0.8:
-                    # This looks like an ID field with high uniqueness - treat as categorical but low priority
-                    characteristics["categorical_columns"].append(column)
-                else:
-                    characteristics["numerical_columns"].append(column)
-            # Check if it's a string that could be parsed as date
-            elif isinstance(sample_value, str):
+            # Get all columns from first row
+            first_row = results[0]
+            characteristics["all_columns"] = list(first_row.keys())
+            
+            for column in first_row.keys():
                 try:
-                    # Try to parse as date
-                    pd.to_datetime(sample_value)
-                    characteristics["date_columns"].append(column)
-                except:
-                    # It's a categorical string
+                    # Extract all values for this column
+                    values = [row.get(column) for row in results if row.get(column) is not None]
+                    if not values:
+                        continue
+                        
+                    sample_value = values[0]
+                    
+                    # Check if it's a date column
+                    if isinstance(sample_value, (datetime, date)):
+                        characteristics["date_columns"].append(column)
+                    # Check if it's numerical
+                    elif isinstance(sample_value, (int, float, Decimal)) and not isinstance(sample_value, bool):
+                        # Additional check: if it looks like an ID field, treat as categorical if reasonable unique values
+                        if (column.lower().endswith('id') or 'id' in column.lower()) and len(set(values)) > len(results) * 0.8:
+                            # This looks like an ID field with high uniqueness - treat as categorical but low priority
+                            characteristics["categorical_columns"].append(column)
+                        else:
+                            characteristics["numerical_columns"].append(column)
+                    # Check if it's a string that could be parsed as date
+                    elif isinstance(sample_value, str):
+                        # Try to detect common date patterns without pandas
+                        is_date = False
+                        try:
+                            from dateutil import parser
+                            parser.parse(sample_value)
+                            is_date = True
+                        except:
+                            # Check for common date patterns manually
+                            import re
+                            date_patterns = [
+                                r'\d{4}-\d{2}-\d{2}',  # YYYY-MM-DD
+                                r'\d{2}/\d{2}/\d{4}',  # MM/DD/YYYY
+                                r'\d{2}-\d{2}-\d{4}',  # MM-DD-YYYY
+                                r'\d{4}/\d{2}/\d{2}',  # YYYY/MM/DD
+                            ]
+                            for pattern in date_patterns:
+                                if re.match(pattern, str(sample_value)):
+                                    is_date = True
+                                    break
+                        
+                        if is_date:
+                            characteristics["date_columns"].append(column)
+                        else:
+                            # It's a categorical string
+                            characteristics["categorical_columns"].append(column)
+                    else:
+                        # Default to categorical
+                        characteristics["categorical_columns"].append(column)
+                    
+                    # Count unique values for categorical insights
+                    unique_values = set(str(v) for v in values if v is not None)
+                    characteristics["unique_categories"][column] = len(unique_values)
+                
+                except Exception as column_error:
+                    print(f"Error analyzing column {column}: {column_error}")
+                    # If we can't analyze the column, default to categorical
                     characteristics["categorical_columns"].append(column)
-            else:
-                # Default to categorical
-                characteristics["categorical_columns"].append(column)
+                    characteristics["unique_categories"][column] = len(set(str(row.get(column)) for row in results if row.get(column) is not None))
             
-            # Count unique values for categorical insights
-            unique_values = set(str(v) for v in values if v is not None)
-            characteristics["unique_categories"][column] = len(unique_values)
-        
-        return characteristics
+            print(f"Data characteristics analysis result: {characteristics}")
+            return characteristics
+            
+        except Exception as e:
+            print(f"Error in _analyze_data_characteristics: {e}")
+            # Return basic characteristics based on data types
+            try:
+                basic_characteristics = {
+                    "numerical_columns": [],
+                    "categorical_columns": [],
+                    "date_columns": [],
+                    "unique_categories": {},
+                    "row_count": len(results),
+                    "all_columns": list(results[0].keys()) if results else []
+                }
+                
+                # Basic type detection fallback
+                if results:
+                    for column in results[0].keys():
+                        sample_value = results[0].get(column)
+                        if isinstance(sample_value, (int, float, Decimal)) and not isinstance(sample_value, bool):
+                            basic_characteristics["numerical_columns"].append(column)
+                        else:
+                            basic_characteristics["categorical_columns"].append(column)
+                
+                return basic_characteristics
+            except:
+                return {}
 
     def _create_chart_recommendation_prompt(self):
         """Create the prompt template for chart recommendations"""
