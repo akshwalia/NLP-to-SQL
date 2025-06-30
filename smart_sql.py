@@ -3270,6 +3270,70 @@ Respond with ONLY one of these two words:
             fallback = self._create_fallback_recommendations(data_characteristics if 'data_characteristics' in locals() else {}, results)
             return fallback
 
+    def _analyze_data_characteristics(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Analyze the characteristics of query results to help with visualization recommendations
+        
+        Args:
+            results: List of query result dictionaries
+            
+        Returns:
+            Dictionary with data characteristics including column types and statistics
+        """
+        if not results or len(results) == 0:
+            return {}
+            
+        characteristics = {
+            "numerical_columns": [],
+            "categorical_columns": [],
+            "date_columns": [],
+            "unique_categories": {},
+            "row_count": len(results),
+            "all_columns": []
+        }
+        
+        # Get all columns from first row
+        first_row = results[0]
+        characteristics["all_columns"] = list(first_row.keys())
+        
+        for column in first_row.keys():
+            # Extract all values for this column
+            values = [row.get(column) for row in results if row.get(column) is not None]
+            if not values:
+                continue
+                
+            sample_value = values[0]
+            
+            # Check if it's a date column
+            if isinstance(sample_value, (datetime, date)):
+                characteristics["date_columns"].append(column)
+            # Check if it's numerical
+            elif isinstance(sample_value, (int, float, Decimal)) and not isinstance(sample_value, bool):
+                # Additional check: if it looks like an ID field, treat as categorical if reasonable unique values
+                if (column.lower().endswith('id') or 'id' in column.lower()) and len(set(values)) > len(results) * 0.8:
+                    # This looks like an ID field with high uniqueness - treat as categorical but low priority
+                    characteristics["categorical_columns"].append(column)
+                else:
+                    characteristics["numerical_columns"].append(column)
+            # Check if it's a string that could be parsed as date
+            elif isinstance(sample_value, str):
+                try:
+                    # Try to parse as date
+                    pd.to_datetime(sample_value)
+                    characteristics["date_columns"].append(column)
+                except:
+                    # It's a categorical string
+                    characteristics["categorical_columns"].append(column)
+            else:
+                # Default to categorical
+                characteristics["categorical_columns"].append(column)
+            
+            # Count unique values for categorical insights
+            unique_values = set(str(v) for v in values if v is not None)
+            characteristics["unique_categories"][column] = len(unique_values)
+        
+        return characteristics
+
     def _create_chart_recommendation_prompt(self):
         """Create the prompt template for chart recommendations"""
         from langchain.prompts import PromptTemplate
@@ -3290,6 +3354,12 @@ Data Sample:
 Data Characteristics:
 {data_characteristics}
 
+CRITICAL INSTRUCTIONS:
+1. You MUST use ONLY the exact column names from the "Available Columns" list above
+2. For person names, if you see columns like "firstname" and "lastname", use one of them (not "Employee Name" or "Full Name")
+3. For counts, use the actual column name (e.g., "order_count" not "Order Count")
+4. NEVER invent column names that don't exist in the data
+
 Please analyze this data and provide visualization recommendations in the following JSON format:
 
 {{
@@ -3298,28 +3368,29 @@ Please analyze this data and provide visualization recommendations in the follow
     "recommended_charts": [
         {{
             "chart_type": "bar/line/pie/donut/scatter/area/bubble/composed/radial/treemap/funnel/gauge/waterfall/heatmap/pyramid",
-            "title": "Descriptive chart title",
+            "title": "Descriptive chart title using actual data context",
             "description": "Why this chart is recommended for business analysis",
-            "x_axis": "column_name_for_x_axis",
-            "y_axis": "column_name_for_y_axis", 
-            "secondary_y_axis": "optional_secondary_column",
+            "x_axis": "EXACT_COLUMN_NAME_FROM_AVAILABLE_COLUMNS",
+            "y_axis": "EXACT_COLUMN_NAME_FROM_AVAILABLE_COLUMNS", 
+            "secondary_y_axis": "optional_exact_column_name",
             "chart_config": {{
                 "color_scheme": "suggested color scheme",
-                "aggregation": "sum/count/avg/max/min if needed"
+                "aggregation": "sum/count/avg/max/min if needed",
+                "name_combination": "firstname_lastname" // ONLY if using name fields
             }},
             "confidence_score": 0.85
         }}
     ],
     "database_type": "{database_type}",
     "data_characteristics": {{
-        "numerical_columns": ["list of numerical columns"],
-        "categorical_columns": ["list of categorical columns"], 
-        "date_columns": ["list of date columns"],
+        "numerical_columns": ["list of exact numerical column names"],
+        "categorical_columns": ["list of exact categorical column names"], 
+        "date_columns": ["list of exact date column names"],
         "unique_categories": number_of_unique_values_in_categorical_data
     }}
 }}
 
-IMPORTANT GUIDELINES:
+CHART SELECTION GUIDELINES:
 1. Only recommend charts that make business sense for the data
 2. For simple ID lists or metadata-only queries, set is_visualizable to false
 3. Prioritize charts that show trends, comparisons, or distributions
@@ -3331,61 +3402,14 @@ IMPORTANT GUIDELINES:
 9. Each chart should have a clear business purpose
 10. Set confidence_score based on how well the chart fits the data
 
+COLUMN MAPPING RULES:
+- If you see "firstname", "lastname" separately, use "firstname" for x-axis and suggest name_combination in chart_config
+- For count/quantity fields, use the actual column name (e.g., "order_count", "total_sales")
+- For categorical grouping, prefer shorter descriptive names over IDs when available
+- Never use spaces in column names unless they exist in the actual data
+
 Return ONLY the JSON object with no additional text or formatting."""
         )
-
-    def _analyze_data_characteristics(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Analyze the characteristics of the query results"""
-        if not results:
-            return {}
-        
-        characteristics = {
-            "numerical_columns": [],
-            "categorical_columns": [],
-            "date_columns": [],
-            "row_count": len(results),
-            "unique_categories": {}
-        }
-        
-        # Analyze each column
-        for column in results[0].keys():
-            values = [row.get(column) for row in results if row.get(column) is not None]
-            if not values:
-                continue
-                
-            # Check if numerical
-            is_numerical = True
-            try:
-                numeric_values = [float(v) for v in values if v is not None]
-                if len(numeric_values) == len(values):
-                    characteristics["numerical_columns"].append(column)
-                    continue
-            except (ValueError, TypeError):
-                is_numerical = False
-            
-            # Check if date
-            is_date = True
-            try:
-                from datetime import datetime
-                for value in values[:5]:  # Sample first 5 values
-                    if value is not None:
-                        if isinstance(value, str):
-                            datetime.fromisoformat(value.replace('Z', '+00:00'))
-                        elif not isinstance(value, datetime):
-                            is_date = False
-                            break
-                if is_date:
-                    characteristics["date_columns"].append(column)
-                    continue
-            except (ValueError, TypeError):
-                is_date = False
-            
-            # Otherwise, it's categorical
-            characteristics["categorical_columns"].append(column)
-            unique_values = set(str(v) for v in values if v is not None)
-            characteristics["unique_categories"][column] = len(unique_values)
-        
-        return characteristics
 
     def _create_fallback_recommendations(self, data_characteristics: Dict, results: List[Dict]) -> Dict[str, Any]:
         """Create basic fallback recommendations when LLM fails"""
@@ -3401,42 +3425,61 @@ Return ONLY the JSON object with no additional text or formatting."""
         numerical_cols = data_characteristics.get("numerical_columns", [])
         categorical_cols = data_characteristics.get("categorical_columns", [])
         date_cols = data_characteristics.get("date_columns", [])
+        all_cols = data_characteristics.get("all_columns", [])
         
         # Simple logic for fallback recommendations
         recommendations = []
         
-        if len(numerical_cols) >= 1 and len(categorical_cols) >= 1:
+        # Check for name fields that can be combined
+        name_fields = []
+        for col in all_cols:
+            if any(name_part in col.lower() for name_part in ['firstname', 'lastname', 'name']):
+                name_fields.append(col)
+        
+        # Prefer categorical fields that aren't IDs for x-axis
+        preferred_categorical = [col for col in categorical_cols 
+                               if not (col.lower().endswith('id') or 'id' in col.lower())]
+        
+        if len(numerical_cols) >= 1 and (len(preferred_categorical) >= 1 or len(name_fields) >= 1):
             # Basic bar chart recommendation
+            x_col = name_fields[0] if name_fields else preferred_categorical[0]
+            y_col = numerical_cols[0]
+            
+            chart_config = {}
+            if x_col in name_fields and len(name_fields) >= 2:
+                chart_config["name_combination"] = "_".join(name_fields[:2])
+            
             recommendations.append({
                 "chart_type": "bar",
-                "title": f"{numerical_cols[0]} by {categorical_cols[0]}",
+                "title": f"{y_col.replace('_', ' ').title()} by {x_col.replace('_', ' ').title()}",
                 "description": "Bar chart showing values across categories",
-                "x_axis": str(categorical_cols[0]),
-                "y_axis": str(numerical_cols[0]),
+                "x_axis": x_col,
+                "y_axis": y_col,
                 "secondary_y_axis": None,
-                "chart_config": {"color_scheme": "blue"},
+                "chart_config": chart_config,
                 "confidence_score": 0.7
             })
         elif len(numerical_cols) >= 2:
             # If we have multiple numerical columns, suggest a scatter plot
             recommendations.append({
                 "chart_type": "scatter",
-                "title": f"{numerical_cols[1]} vs {numerical_cols[0]}",
+                "title": f"{numerical_cols[1].replace('_', ' ').title()} vs {numerical_cols[0].replace('_', ' ').title()}",
                 "description": "Scatter plot showing correlation between values",
-                "x_axis": str(numerical_cols[0]),
-                "y_axis": str(numerical_cols[1]),
+                "x_axis": numerical_cols[0],
+                "y_axis": numerical_cols[1],
                 "secondary_y_axis": None,
                 "chart_config": {"color_scheme": "blue"},
                 "confidence_score": 0.6
             })
         elif len(categorical_cols) >= 1 and len(numerical_cols) >= 1:
             # Pie chart for categorical distribution
+            x_col = preferred_categorical[0] if preferred_categorical else categorical_cols[0]
             recommendations.append({
                 "chart_type": "pie",
-                "title": f"Distribution of {numerical_cols[0]} by {categorical_cols[0]}",
+                "title": f"Distribution of {numerical_cols[0].replace('_', ' ').title()} by {x_col.replace('_', ' ').title()}",
                 "description": "Pie chart showing distribution across categories",
-                "x_axis": str(categorical_cols[0]),
-                "y_axis": str(numerical_cols[0]),
+                "x_axis": x_col,
+                "y_axis": numerical_cols[0],
                 "secondary_y_axis": None,
                 "chart_config": {"color_scheme": "multi"},
                 "confidence_score": 0.6
@@ -3446,10 +3489,10 @@ Return ONLY the JSON object with no additional text or formatting."""
             # Time series line chart
             recommendations.append({
                 "chart_type": "line", 
-                "title": f"{numerical_cols[0]} over time",
+                "title": f"{numerical_cols[0].replace('_', ' ').title()} over time",
                 "description": "Line chart showing trends over time",
-                "x_axis": str(date_cols[0]),
-                "y_axis": str(numerical_cols[0]),
+                "x_axis": date_cols[0],
+                "y_axis": numerical_cols[0],
                 "secondary_y_axis": None,
                 "chart_config": {"color_scheme": "blue"},
                 "confidence_score": 0.8
@@ -3475,56 +3518,49 @@ Return ONLY the JSON object with no additional text or formatting."""
                 "data_characteristics": recommendations_data.get("data_characteristics", data_characteristics)
             }
             
-            # Get available columns for fallback
-            available_columns = (
-                data_characteristics.get("numerical_columns", []) +
-                data_characteristics.get("categorical_columns", []) +
-                data_characteristics.get("date_columns", [])
-            )
+            # Get available columns for validation
+            available_columns = data_characteristics.get("all_columns", [])
+            numerical_cols = data_characteristics.get("numerical_columns", [])
+            categorical_cols = data_characteristics.get("categorical_columns", [])
+            date_cols = data_characteristics.get("date_columns", [])
             
             # Format recommended charts
             for chart in recommendations_data.get("recommended_charts", []):
                 if isinstance(chart, dict) and chart.get("chart_type") and chart.get("title"):
-                    # Validate and fix x_axis and y_axis - ensure they're never None
+                    # Validate and fix x_axis and y_axis - ensure they exist in actual data
                     x_axis = chart.get("x_axis")
                     y_axis = chart.get("y_axis")
                     
-                    # If x_axis or y_axis is None, try to assign reasonable defaults
-                    if x_axis is None or x_axis == "null":
-                        if data_characteristics.get("categorical_columns"):
-                            x_axis = data_characteristics["categorical_columns"][0]
-                        elif data_characteristics.get("date_columns"):
-                            x_axis = data_characteristics["date_columns"][0]
+                    # Validate x_axis exists in data
+                    if x_axis not in available_columns:
+                        # Try to find a suitable replacement
+                        if categorical_cols:
+                            x_axis = categorical_cols[0]
+                        elif date_cols:
+                            x_axis = date_cols[0]
                         elif available_columns:
                             x_axis = available_columns[0]
                         else:
-                            # Skip this chart if we can't determine a valid x_axis
-                            continue
+                            continue  # Skip this chart
                     
-                    if y_axis is None or y_axis == "null":
-                        if data_characteristics.get("numerical_columns"):
-                            y_axis = data_characteristics["numerical_columns"][0]
+                    # Validate y_axis exists in data
+                    if y_axis not in available_columns:
+                        # Try to find a suitable replacement
+                        if numerical_cols:
+                            y_axis = numerical_cols[0]
                         elif available_columns:
-                            # Find a different column than x_axis
                             y_axis = next((col for col in available_columns if col != x_axis), available_columns[0])
                         else:
-                            # Skip this chart if we can't determine a valid y_axis
-                            continue
-                    
-                    # Ensure x_axis and y_axis are strings
-                    x_axis = str(x_axis) if x_axis is not None else ""
-                    y_axis = str(y_axis) if y_axis is not None else ""
+                            continue  # Skip this chart
                     
                     # Skip if either axis is empty after conversion
                     if not x_axis or not y_axis:
                         continue
                     
-                    # Handle secondary_y_axis - ensure it's either None or a string
+                    # Handle secondary_y_axis - ensure it's either None or exists in data
                     secondary_y_axis = chart.get("secondary_y_axis")
-                    if secondary_y_axis == "null":
+                    if secondary_y_axis and secondary_y_axis not in available_columns:
                         secondary_y_axis = None
-                    elif secondary_y_axis is not None:
-                        secondary_y_axis = str(secondary_y_axis)
                     
                     formatted_chart = {
                         "chart_type": str(chart["chart_type"]),

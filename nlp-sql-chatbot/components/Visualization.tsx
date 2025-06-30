@@ -67,20 +67,135 @@ interface SavedChart {
   created_at: string;
 }
 
-// Utility function to format numerical values to 2 decimal places
+// Helper function to format numbers
 const formatNumber = (value: any): number => {
-  if (value === null || value === undefined) return 0;
-  const num = Number(value);
-  if (isNaN(num)) return 0;
-  return parseFloat(num.toFixed(2));
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') {
+    const parsed = parseFloat(value);
+    return isNaN(parsed) ? 0 : parsed;
+  }
+  return 0;
 };
 
-// Custom tooltip formatter
-const formatTooltipValue = (value: any, name: string): [string, string] => {
+// Helper function to format tooltip values
+const formatTooltipValue = (value: any, name: string) => {
   if (typeof value === 'number') {
-    return [formatNumber(value).toString(), name];
+    return [value.toLocaleString(), name];
   }
-  return [String(value), name];
+  return [value, name];
+};
+
+// Helper function to get display name for a row based on column mapping
+const getDisplayName = (row: any, column: string, chart?: RecommendedChart | SavedChart): string => {
+  // Check if we need to combine name fields
+  const chartConfig = chart?.chart_config;
+  
+  // If chart config suggests name combination
+  if (chartConfig?.name_combination) {
+    const nameFields = chartConfig.name_combination.split('_');
+    if (nameFields.length >= 2) {
+      const combinedName = nameFields
+        .map(field => row[field] || '')
+        .filter(part => part.trim())
+        .join(' ')
+        .trim();
+      if (combinedName) return combinedName;
+    }
+  }
+  
+  // Check for common name combinations in the data
+  if (column.toLowerCase().includes('name') || column.toLowerCase().includes('employee')) {
+    // Look for firstname, lastname combinations
+    if (row.firstname && row.lastname) {
+      return `${row.firstname} ${row.lastname}`.trim();
+    }
+    // Look for first_name, last_name combinations
+    if (row.first_name && row.last_name) {
+      return `${row.first_name} ${row.last_name}`.trim();
+    }
+    // Look for name field
+    if (row.name) {
+      return row.name;
+    }
+  }
+  
+  // Fall back to the actual column value
+  const value = row[column];
+  if (value !== null && value !== undefined) {
+    return String(value);
+  }
+  
+  // Last resort: try to find a suitable column
+  const availableKeys = Object.keys(row);
+  const nameRelatedKeys = availableKeys.filter(key => 
+    key.toLowerCase().includes('name') || 
+    key.toLowerCase().includes('firstname') || 
+    key.toLowerCase().includes('lastname')
+  );
+  
+  if (nameRelatedKeys.length > 0) {
+    return String(row[nameRelatedKeys[0]] || 'Unknown');
+  }
+  
+  return 'Unknown';
+};
+
+// Helper function to map recommended columns to actual data columns
+const mapColumnToData = (recommendedColumn: string, availableColumns: string[]): string => {
+  // If the recommended column exists in data, use it
+  if (availableColumns.includes(recommendedColumn)) {
+    return recommendedColumn;
+  }
+  
+  const lowerRecommended = recommendedColumn.toLowerCase();
+  
+  // Handle common mappings
+  const columnMappings: { [key: string]: string[] } = {
+    'employee name': ['firstname', 'lastname', 'name', 'employee_name', 'full_name'],
+    'full name': ['firstname', 'lastname', 'name', 'full_name'],
+    'name': ['firstname', 'lastname', 'name', 'employee_name'],
+    'order count': ['order_count', 'ordercount', 'orders', 'count'],
+    'total amount': ['total_amount', 'amount', 'total', 'value'],
+    'total sales': ['total_sales', 'sales', 'total_amount', 'amount'],
+    'revenue': ['revenue', 'total_sales', 'sales', 'amount'],
+    'quantity': ['quantity', 'qty', 'count', 'amount'],
+    'price': ['price', 'unit_price', 'amount', 'cost'],
+    'date': ['date', 'created_at', 'order_date', 'date_created'],
+    'age': ['age', 'years', 'employee_age']
+  };
+  
+  // Check for direct mapping
+  if (columnMappings[lowerRecommended]) {
+    for (const candidate of columnMappings[lowerRecommended]) {
+      if (availableColumns.includes(candidate)) {
+        return candidate;
+      }
+    }
+  }
+  
+  // Try partial matches
+  for (const available of availableColumns) {
+    const lowerAvailable = available.toLowerCase();
+    
+    // Check if available column contains the recommended word
+    if (lowerRecommended.includes(lowerAvailable) || lowerAvailable.includes(lowerRecommended)) {
+      return available;
+    }
+    
+    // Handle common patterns
+    if (lowerRecommended.includes('count') && lowerAvailable.includes('count')) {
+      return available;
+    }
+    if (lowerRecommended.includes('amount') && lowerAvailable.includes('amount')) {
+      return available;
+    }
+    if (lowerRecommended.includes('name') && lowerAvailable.includes('name')) {
+      return available;
+    }
+  }
+  
+  // Fallback to first available column
+  return availableColumns[0] || recommendedColumn;
 };
 
 export default function Visualization({ 
@@ -163,8 +278,9 @@ export default function Visualization({
   const prepareChartData = (chart?: RecommendedChart | SavedChart): any[] => {
     if (!data || data.length === 0) return [];
 
-    const xCol = chart?.x_axis || xAxis;
-    const yCol = chart?.y_axis || yAxis;
+    // Map recommended columns to actual data columns
+    const xCol = mapColumnToData(chart?.x_axis || xAxis, availableColumns);
+    const yCol = mapColumnToData(chart?.y_axis || yAxis, availableColumns);
     const chartTypeToUse = chart?.chart_type || chartType;
 
     if (!xCol || !yCol) return [];
@@ -173,7 +289,7 @@ export default function Visualization({
     if (['pie', 'donut', 'radial', 'funnel', 'treemap'].includes(chartTypeToUse)) {
       const aggregated: { [key: string]: number } = {};
       data.forEach(row => {
-        const key = String(row[xCol] || 'Unknown');
+        const key = getDisplayName(row, xCol, chart);
         const value = formatNumber(row[yCol] || 0);
         
         if (aggregated[key]) {
@@ -192,20 +308,33 @@ export default function Visualization({
     
     // For scatter and bubble plots
     if (chartTypeToUse === 'scatter' || chartTypeToUse === 'bubble') {
-      return data.map((row, index) => ({
-        name: row[xCol] || 'Unknown',
-        x: formatNumber(row[xCol] || 0),
-        y: formatNumber(row[yCol] || 0),
-        z: chartTypeToUse === 'bubble' ? formatNumber(row[secondaryYAxis] || row[yCol] || 10) : 10,
-        fill: COLORS[index % COLORS.length]
-      }));
+      return data.map((row, index) => {
+        // For scatter plots, we need numerical values for both axes
+        // But we can use a display name for the point label
+        const displayName = getDisplayName(row, xCol, chart);
+        const xValue = formatNumber(row[xCol] || 0);
+        const yValue = formatNumber(row[yCol] || 0);
+        
+        return {
+          name: displayName,
+          [xCol]: xValue,  // Use actual column name for axis
+          [yCol]: yValue,  // Use actual column name for axis
+          z: chartTypeToUse === 'bubble' ? formatNumber(row[secondaryYAxis] || row[yCol] || 10) : 10,
+          fill: COLORS[index % COLORS.length]
+        };
+      });
     }
     
     // For bar, line, and area charts
-    return data.map(row => ({
-      name: row[xCol] || 'Unknown',
-      value: formatNumber(row[yCol] || 0)
-    }));
+    return data.map(row => {
+      const displayName = getDisplayName(row, xCol, chart);
+      const value = formatNumber(row[yCol] || 0);
+      
+      return {
+        name: displayName,
+        value: value
+      };
+    });
   };
   
   const renderChart = (chart?: RecommendedChart | SavedChart) => {
@@ -341,11 +470,23 @@ export default function Visualization({
         );
 
       case 'scatter':
+        const xColMapped = mapColumnToData(chart?.x_axis || xAxis, availableColumns);
+        const yColMapped = mapColumnToData(chart?.y_axis || yAxis, availableColumns);
         return (
           <ScatterChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 30 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-            <XAxis dataKey="name" tick={{ fill: '#D1D5DB' }} />
-            <YAxis tick={{ fill: '#D1D5DB' }} />
+            <XAxis 
+              dataKey={xColMapped} 
+              type="number" 
+              tick={{ fill: '#D1D5DB' }} 
+              name={chart?.x_axis || xAxis}
+            />
+            <YAxis 
+              dataKey={yColMapped} 
+              type="number" 
+              tick={{ fill: '#D1D5DB' }} 
+              name={chart?.y_axis || yAxis}
+            />
             <Tooltip 
               contentStyle={{ 
                 backgroundColor: '#1F2937', 
@@ -356,7 +497,7 @@ export default function Visualization({
               formatter={formatTooltipValue}
             />
             <Legend />
-            <Scatter name={chart?.y_axis || yAxis} dataKey="value" fill="#3B82F6" />
+            <Scatter name={chart?.y_axis || yAxis} fill="#3B82F6" />
           </ScatterChart>
         );
       
@@ -493,9 +634,17 @@ export default function Visualization({
     setSelectedRecommendationIndex(index);
     setChartType(recommendation.chart_type as ChartType);
     setChartTitle(recommendation.title);
-    setXAxis(recommendation.x_axis);
-    setYAxis(recommendation.y_axis);
-    setSecondaryYAxis(recommendation.secondary_y_axis || '');
+    
+    // Map the recommended column names to actual data columns
+    const mappedXAxis = mapColumnToData(recommendation.x_axis, availableColumns);
+    const mappedYAxis = mapColumnToData(recommendation.y_axis, availableColumns);
+    const mappedSecondaryYAxis = recommendation.secondary_y_axis 
+      ? mapColumnToData(recommendation.secondary_y_axis, availableColumns) 
+      : '';
+    
+    setXAxis(mappedXAxis);
+    setYAxis(mappedYAxis);
+    setSecondaryYAxis(mappedSecondaryYAxis);
     setCurrentView('create');
   };
 
